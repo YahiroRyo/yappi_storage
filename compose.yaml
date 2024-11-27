@@ -1,0 +1,56 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: ./docker/frontend.Dockerfile
+    working_dir: /home/frontend
+    volumes:
+      - ./frontend:/home/frontend
+    ports:
+      - 127.0.0.1:3000:3000
+    depends_on:
+      - backend
+    tty: true
+    
+  backend:
+    build:
+      context: .
+      dockerfile: ./docker/backend.Dockerfile
+    volumes:
+      - ./backend:/go/src/github.com/YahiroRyo/yappi_storage/backend
+    tty: true
+    ports:
+      - 127.0.0.1:8000:8000
+    depends_on:
+      - postgres
+      - postgres.test
+
+  postgres:
+    build: 
+      context: .
+      dockerfile: ./docker/postgres.Dockerfile
+    volumes:
+      - ./database/postgres:/var/lib/postgresql/data
+      - ./database/logs:/var/log
+    environment:
+      POSTGRES_DB: 'main'
+      POSTGRES_USER: 'docker'
+      POSTGRES_PASSWORD: 'docker'
+      PGDATA: /var/lib/postgresql/data/pgdata
+      TZ: "Asia/Tokyo"
+      LC_ALL: "C.UTF-8"
+
+  postgres.test:
+    build: 
+      context: .
+      dockerfile: ./docker/postgres.Dockerfile
+    volumes:
+      - ./database.test/postgres:/var/lib/postgresql/data
+      - ./database.test/logs:/var/log
+    environment:
+      POSTGRES_DB: 'main'
+      POSTGRES_USER: 'docker'
+      POSTGRES_PASSWORD: 'docker'
+      PGDATA: /var/lib/postgresql/data/pgdata
+      TZ: "Asia/Tokyo"
+      LC_ALL: "C.UTF-8"
