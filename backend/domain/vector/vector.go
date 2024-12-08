@@ -1,3 +1,3 @@
 package vector
 
-type Vector [512]float64
+type Vector [1536]float32

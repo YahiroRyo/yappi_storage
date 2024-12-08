@@ -10,4 +10,11 @@ func SetRoutes(app *fiber.App, controller controller.Controller) {
 	{
 		files.Get("/", controller.GetFiles)
 	}
+
+	users := app.Group("/users")
+	{
+		users.Post("/login", controller.Login)
+		users.Post("/registration", controller.Registration)
+		users.Post("/logout", controller.Logout)
+	}
 }

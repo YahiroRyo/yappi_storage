@@ -7,11 +7,11 @@ import (
 )
 
 type File struct {
-	ID                string
-	UserID            string
-	ParentDirectoryID *string
-	Embedding         *vector.Vector
-	Kind              FileKind
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
+	ID                string         `json:"id"`
+	UserID            string         `json:"user_id"`
+	ParentDirectoryID *string        `json:"parent_directory_id"`
+	Embedding         *vector.Vector `json:"embedding"`
+	Kind              FileKind       `json:"kind"`
+	CreatedAt         time.Time      `json:"created_at"`
+	UpdatedAt         time.Time      `json:"updated_at"`
 }

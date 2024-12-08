@@ -59,3 +59,26 @@ func (fileKind FileKind) ToEnString() string {
 		return "Unknown"
 	}
 }
+
+func FileKindFromEnString(en string) FileKind {
+	switch en {
+	case "Directory":
+		return Directory
+	case "WordDocument":
+		return Word
+	case "ExcelDocument":
+		return Excel
+	case "PowerPointDocument":
+		return PowerPoint
+	case "PDF":
+		return PDF
+	case "Video":
+		return Video
+	case "Image":
+		return Image
+	case "CompressedFile":
+		return Zip
+	default:
+		return Unknown
+	}
+}

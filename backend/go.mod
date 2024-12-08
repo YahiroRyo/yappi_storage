@@ -3,10 +3,12 @@ module github.com/YahiroRyo/yappi_storage/backend
 go 1.23.3
 
 require (
+	github.com/bwmarrin/snowflake v0.3.0
 	github.com/goccy/go-json v0.10.3
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/lib/pq v1.10.9
+	github.com/sashabaranov/go-openai v1.36.0
 )
 
 require (
