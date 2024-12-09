@@ -9,7 +9,7 @@ import (
 )
 
 type SearchFilesService struct {
-	Conn        sqlx.DB
+	Conn        *sqlx.DB
 	FileRepo    repository.FileRepositoryInterface
 	ChatGPTRepo repository.ChatGPTRepositoryInterface
 }

@@ -24,6 +24,8 @@ services:
     depends_on:
       - postgres
       - postgres.test
+    networks:
+      - db
 
   postgres:
     build: 
@@ -33,12 +35,15 @@ services:
       - ./database/postgres:/var/lib/postgresql/data
       - ./database/logs:/var/log
     environment:
+      POSTGRES_HOST_AUTH_METHOD: 'trust'
       POSTGRES_DB: 'main'
       POSTGRES_USER: 'docker'
       POSTGRES_PASSWORD: 'docker'
       PGDATA: /var/lib/postgresql/data/pgdata
       TZ: "Asia/Tokyo"
       LC_ALL: "C.UTF-8"
+    networks:
+      - db
 
   postgres.test:
     build: 
@@ -48,9 +53,16 @@ services:
       - ./database.test/postgres:/var/lib/postgresql/data
       - ./database.test/logs:/var/log
     environment:
+      POSTGRES_HOST_AUTH_METHOD: 'trust'
       POSTGRES_DB: 'main'
       POSTGRES_USER: 'docker'
       POSTGRES_PASSWORD: 'docker'
       PGDATA: /var/lib/postgresql/data/pgdata
       TZ: "Asia/Tokyo"
       LC_ALL: "C.UTF-8"
+    networks:
+      - db
+
+networks:
+  db:
+    driver: bridge

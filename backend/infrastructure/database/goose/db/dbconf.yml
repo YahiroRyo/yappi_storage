@@ -1,0 +1,21 @@
+test:
+    driver: postgres
+    open: user=liam dbname=tester sslmode=disable
+
+development:
+    driver: postgres
+    open: host=postgres port=5432 user=docker password=docker dbname=main sslmode=disable
+    
+production:
+    driver: postgres
+    open: user=liam dbname=tester sslmode=verify-full
+
+customimport:
+    driver: customdriver
+    open: customdriver open
+    import: github.com/custom/driver
+    dialect: mysql
+
+environment_variable_config:
+    driver: $DB_DRIVER
+    open: $DATABASE_URL

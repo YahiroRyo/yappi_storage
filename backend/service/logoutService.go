@@ -7,7 +7,7 @@ import (
 )
 
 type LogoutService struct {
-	Conn     sqlx.DB
+	Conn     *sqlx.DB
 	UserRepo repository.UserRepositoryInterface
 }
 
@@ -23,7 +23,7 @@ func (service *LogoutService) Execute(sess *session.Session) error {
 		return err
 	}
 
-	err = service.UserRepo.Logout(*tx, *user)
+	err = service.UserRepo.Logout(tx, *user)
 	if err != nil {
 		tx.Rollback()
 		return err

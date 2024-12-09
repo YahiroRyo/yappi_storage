@@ -1,7 +1,6 @@
 package validate
 
 import (
-	"fmt"
 	"regexp"
 )
 
@@ -11,7 +10,7 @@ func Email(value string, name string) error {
 	if isMatched := re.MatchString(value); !isMatched {
 		return ValidationError{
 			Code:    401,
-			Message: fmt.Sprintf("%sはメールアドレスではありません。", name),
+			Message: "正常なメールアドレスではありません。",
 		}
 	}
 

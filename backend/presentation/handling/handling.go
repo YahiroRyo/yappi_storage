@@ -6,33 +6,58 @@ import (
 	"github.com/YahiroRyo/yappi_storage/backend/helper/validate"
 	"github.com/YahiroRyo/yappi_storage/backend/infrastructure/repository"
 	"github.com/YahiroRyo/yappi_storage/backend/presentation/response"
+	"github.com/YahiroRyo/yappi_storage/backend/service"
 	"github.com/gofiber/fiber/v2"
 )
 
-var ErrorHandler = func(ctx *fiber.Ctx, err error) error {
+func bignessLogicErrorHandler(ctx *fiber.Ctx, err error) bool {
+	var alreadyUsedEmailAddress service.AlreadyUsedEmailAddressError
+	if errors.As(err, &alreadyUsedEmailAddress) {
+		ctx.Status(alreadyUsedEmailAddress.Code).JSON(response.ErrorResponse{Message: alreadyUsedEmailAddress.Message})
+		return true
+	}
+
+	return false
+}
+
+func basicErrorHandler(ctx *fiber.Ctx, err error) bool {
+	var notFoundErr repository.NotFoundError
+	if errors.As(err, &notFoundErr) {
+		ctx.Status(notFoundErr.Code).JSON(response.ErrorResponse{Message: notFoundErr.Message})
+		return true
+	}
+
+	var fieldSqlErr repository.FieldSQLError
+	if errors.As(err, &fieldSqlErr) {
+		ctx.Status(fieldSqlErr.Code).JSON(response.ErrorResponse{Message: fieldSqlErr.Message})
+		return true
+	}
+
+	var fieldFetchAPIError repository.FieldFetchAPIError
+	if errors.As(err, &fieldFetchAPIError) {
+		ctx.Status(fieldFetchAPIError.Code).JSON(response.ErrorResponse{Message: fieldFetchAPIError.Message})
+		return true
+	}
+
+	return false
+}
+
+func ErrorHandler(ctx *fiber.Ctx, err error) error {
 	code := fiber.StatusInternalServerError
 
 	ctx.Set(fiber.HeaderContentType, fiber.MIMETextPlainCharsetUTF8)
 
-	var validationErr *validate.ValidationError
+	var validationErr validate.ValidationError
 	if errors.As(err, &validationErr) {
-		// errorの配列を想定しているため、errを渡しました
 		return response.ValidationErrorResponse(ctx, err)
 	}
 
-	var notFoundErr *repository.NotFoundError
-	if errors.As(err, &notFoundErr) {
-		return ctx.Status(notFoundErr.Code).JSON(response.ErrorResponse{Message: notFoundErr.Message})
+	if isExistsErr := bignessLogicErrorHandler(ctx, err); isExistsErr {
+		return nil
 	}
 
-	var fieldSqlErr *repository.FieldSQLError
-	if errors.As(err, &fieldSqlErr) {
-		return ctx.Status(fieldSqlErr.Code).JSON(response.ErrorResponse{Message: fieldSqlErr.Message})
-	}
-
-	var fieldFetchAPIError *repository.FieldFetchAPIError
-	if errors.As(err, &fieldFetchAPIError) {
-		return ctx.Status(fieldFetchAPIError.Code).JSON(response.ErrorResponse{Message: fieldFetchAPIError.Message})
+	if isExistsErr := basicErrorHandler(ctx, err); isExistsErr {
+		return nil
 	}
 
 	return ctx.Status(code).JSON(struct {

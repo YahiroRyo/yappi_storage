@@ -9,7 +9,7 @@ import (
 )
 
 type LoginService struct {
-	Conn     sqlx.DB
+	Conn     *sqlx.DB
 	UserRepo repository.UserRepositoryInterface
 }
 
@@ -26,7 +26,7 @@ func (service *LoginService) Execute(sess *session.Session, email string, passwo
 		return nil, err
 	}
 
-	user, err := service.UserRepo.Login(*tx, email, password, *sessionId)
+	user, err := service.UserRepo.Login(tx, email, password, *sessionId)
 	if err != nil {
 		return nil, err
 	}

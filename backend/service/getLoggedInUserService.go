@@ -8,7 +8,7 @@ import (
 )
 
 type GetLoggedInUserService struct {
-	Conn     sqlx.DB
+	Conn     *sqlx.DB
 	UserRepo repository.UserRepositoryInterface
 }
 

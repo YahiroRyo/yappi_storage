@@ -15,7 +15,7 @@ func (controller *Controller) GetFiles(ctx *fiber.Ctx) error {
 		return err
 	}
 
-	if err := validate.Validate(req); err != nil {
+	if err := validate.Validate(&req); err != nil {
 		return err
 	}
 

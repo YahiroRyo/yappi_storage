@@ -11,9 +11,9 @@ import (
 )
 
 type FileRepositoryInterface interface {
-	GetFiles(db sqlx.DB, user user.User, parentDirectoryId *string, currentPageCount int, pageSize int) (*file.Files, error)
+	GetFiles(db *sqlx.DB, user user.User, parentDirectoryId *string, currentPageCount int, pageSize int) (*file.Files, error)
 	SearchFiles(
-		db sqlx.DB,
+		db *sqlx.DB,
 		user user.User,
 		embedding vector.Vector,
 		currentPageCount int,
@@ -24,7 +24,7 @@ type FileRepositoryInterface interface {
 type FileRepository struct {
 }
 
-func (repo *FileRepository) GetFiles(db sqlx.DB, user user.User, parentDirectoryId *string, currentPageCount int, pageSize int) (*file.Files, error) {
+func (repo *FileRepository) GetFiles(db *sqlx.DB, user user.User, parentDirectoryId *string, currentPageCount int, pageSize int) (*file.Files, error) {
 	args := map[string]interface{}{
 		"user_id":  user.ID,
 		"pageSize": pageSize,
@@ -42,7 +42,7 @@ func (repo *FileRepository) GetFiles(db sqlx.DB, user user.User, parentDirectory
 
 	q += `LIMIT :pageSize OFFSET :offset`
 
-	rows, err := db.Query(q, args)
+	rows, err := db.NamedQuery(q, args)
 	if err != nil {
 		return nil, errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err)
 	}
@@ -61,7 +61,7 @@ func (repo *FileRepository) GetFiles(db sqlx.DB, user user.User, parentDirectory
 }
 
 func (repo *FileRepository) SearchFiles(
-	db sqlx.DB,
+	db *sqlx.DB,
 	user user.User,
 	embedding vector.Vector,
 	currentPageCount int,
@@ -95,7 +95,7 @@ func (repo *FileRepository) SearchFiles(
 		OFFSET
 			:offset`
 
-	rows, err := db.Query(q, args)
+	rows, err := db.NamedQuery(q, args)
 	if err != nil {
 		return nil, errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err)
 	}
