@@ -8,7 +8,7 @@ import (
 
 type File struct {
 	ID                int64          `json:"id"`
-	UserID            string         `json:"user_id"`
+	UserID            int64          `json:"user_id"`
 	ParentDirectoryID *string        `json:"parent_directory_id"`
 	Embedding         *vector.Vector `json:"embedding"`
 	Kind              FileKind       `json:"kind"`

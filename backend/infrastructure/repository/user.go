@@ -21,15 +21,20 @@ type UserRepository struct {
 }
 
 func (repo *UserRepository) GetLoggedInUser(conn *sqlx.DB, sess *session.Session) (*user.User, error) {
-	row := conn.QueryRow("SELECT id, email, password, icon, session_id, created_at WHERE session_id = $1", sess.Get("id"))
+	row := conn.QueryRow("SELECT * WHERE session_id = $1", sess.Get("id"))
 	if row == nil {
 		return nil, errors.Join(NotFoundError{Code: 404, Message: "データが存在しません。"}, row.Err())
 	}
 
-	var result user.User
-	row.Scan(&result)
+	var result database.User
+	err := row.Scan(&result.ID, &result.Email, &result.Password, &result.SessionID, &result.Icon, &result.CreatedAt)
+	if err != nil {
+		return nil, errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, row.Err())
+	}
 
-	return &result, nil
+	user := result.ToEntity()
+
+	return &user, nil
 }
 
 func (repo *UserRepository) Login(tx *sqlx.Tx, email string, password string, sessionId string) (*user.User, error) {

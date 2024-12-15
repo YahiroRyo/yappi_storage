@@ -11,6 +11,7 @@ import (
 	"github.com/YahiroRyo/yappi_storage/backend/infrastructure/route"
 	"github.com/YahiroRyo/yappi_storage/backend/presentation/controller"
 	"github.com/YahiroRyo/yappi_storage/backend/presentation/handling"
+	"github.com/YahiroRyo/yappi_storage/backend/presentation/middleware"
 	"github.com/YahiroRyo/yappi_storage/backend/service"
 	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
@@ -53,30 +54,46 @@ func main() {
 
 	defer file.Close()
 
+	userRepo := repository.UserRepository{}
+	fileRepo := repository.FileRepository{}
+	chatGPTRepo := repository.ChatGPTRepository{}
+
 	route.SetRoutes(app, controller.Controller{
-		GetLoggedInUserService: service.GetLoggedInUserService{
-			Conn:     conn,
-			UserRepo: &repository.UserRepository{},
-		},
 		GetFilesService: service.GetFilesService{
 			Conn:     conn,
-			FileRepo: &repository.FileRepository{},
+			FileRepo: &fileRepo,
 		},
 		SearchFilesService: service.SearchFilesService{
+			Conn:        conn,
+			FileRepo:    &fileRepo,
+			ChatGPTRepo: &chatGPTRepo,
+		},
+		UploadFileService: service.UploadFileService{
+			UserRepo:    &userRepo,
+			FileRepo:    &fileRepo,
+			ChatGPTRepo: &chatGPTRepo,
+		},
+
+		GetLoggedInUserService: service.GetLoggedInUserService{
 			Conn:     conn,
-			FileRepo: &repository.FileRepository{},
+			UserRepo: &userRepo,
 		},
 		LoginService: service.LoginService{
 			Conn:     conn,
-			UserRepo: &repository.UserRepository{},
+			UserRepo: &userRepo,
 		},
 		RegistrationUserService: service.RegistrationUserService{
 			Conn:     conn,
-			UserRepo: &repository.UserRepository{},
+			UserRepo: &userRepo,
 		},
 		LogoutService: service.LogoutService{
 			Conn:     conn,
-			UserRepo: &repository.UserRepository{},
+			UserRepo: &userRepo,
+		},
+	}, middleware.Middleware{
+		GetLoggedInUserService: service.GetLoggedInUserService{
+			Conn:     conn,
+			UserRepo: &userRepo,
 		},
 	})
 

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"errors"
+	"mime/multipart"
 
 	"github.com/YahiroRyo/yappi_storage/backend/domain/file"
 	"github.com/YahiroRyo/yappi_storage/backend/domain/user"
@@ -19,6 +20,8 @@ type FileRepositoryInterface interface {
 		currentPageCount int,
 		pageSize int,
 	) (*file.Files, error)
+	RegistrationFile(tx *sqlx.Tx, user user.User, file file.File) (*file.File, error)
+	UploadChunk(id string, fileHandler *multipart.FileHeader) (bool, error)
 }
 
 type FileRepository struct {
@@ -111,4 +114,39 @@ func (repo *FileRepository) SearchFiles(
 	}
 
 	return &files, nil
+}
+
+func (repo *FileRepository) RegistrationFile(tx *sqlx.Tx, user user.User, file file.File) (*file.File, error) {
+	_, err := tx.Exec(`
+		INSERT INTO files
+			(
+				id,
+				user_id,
+				parent_directory_id,
+				embedding,
+				kind,
+				url,
+				name,
+				created_at,
+				updated_at
+			)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+		file.ID,
+		file.UserID,
+		file.ParentDirectoryID,
+		file.Embedding,
+		file.Kind,
+		file.Url,
+		file.Name,
+		file.CreatedAt,
+		file.UpdatedAt,
+	)
+	if err != nil {
+		return nil, errors.Join(FieldSQLError{Message: "エラーが発生しました。", Code: 500}, err)
+	}
+
+	return &file, nil
+}
+
+func (repo *FileRepository) UploadChunk(id string, fileHandler *multipart.FileHeader) (bool, error) {
 }

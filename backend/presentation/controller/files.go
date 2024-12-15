@@ -57,3 +57,21 @@ func (controller *Controller) GetFiles(ctx *fiber.Ctx) error {
 
 	return nil
 }
+
+func (controller *Controller) UploadFile(ctx *fiber.Ctx) error {
+	sess, err := session.GetSession(ctx)
+	if err != nil {
+		return err
+	}
+
+	handler, err := ctx.FormFile("data")
+
+	isUploaded, err := controller.UploadFileService.Execute(sess, handler)
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(struct {
+		IsUploaded bool `json:"is_uploaded"`
+	}{IsUploaded: isUploaded})
+}

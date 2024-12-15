@@ -2,11 +2,12 @@ package route
 
 import (
 	"github.com/YahiroRyo/yappi_storage/backend/presentation/controller"
+	"github.com/YahiroRyo/yappi_storage/backend/presentation/middleware"
 	"github.com/gofiber/fiber/v2"
 )
 
-func SetRoutes(app *fiber.App, controller controller.Controller) {
-	files := app.Group("/files")
+func SetRoutes(app *fiber.App, controller controller.Controller, middleware middleware.Middleware) {
+	files := app.Group("/files").Use(middleware.AuthenticateLoggedInUserMiddleware)
 	{
 		files.Get("/", controller.GetFiles)
 	}
@@ -15,6 +16,6 @@ func SetRoutes(app *fiber.App, controller controller.Controller) {
 	{
 		users.Post("/login", controller.Login)
 		users.Post("/registration", controller.Registration)
-		users.Post("/logout", controller.Logout)
+		users.Use(middleware.AuthenticateLoggedInUserMiddleware).Post("/logout", controller.Logout)
 	}
 }
