@@ -8,6 +8,7 @@ type Controller struct {
 	SearchFilesService      service.SearchFilesService
 	RegistrationFileService service.RegistrationFileService
 	MoveFileService         service.MoveFileService
+	RenameFileService       service.RenameFileService
 	DeleteFileService       service.DeleteFileService
 
 	GetLoggedInUserService  service.GetLoggedInUserService

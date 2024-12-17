@@ -12,9 +12,14 @@ type RegistrationFileRequest struct {
 	Url               string `json:"url" validate:"required,url" validate_name:"URL"`
 }
 
+type RenameFileRequest struct {
+	FileId int64  `json:"file_id" validate:"required,id" validate_name:"ファイルID"`
+	Name   string `json:"name" validate:"id,max_len=512" validate_name:"ファイル名"`
+}
+
 type MoveFileRequest struct {
-	FileId                 int64  `json:"file_id" validate:"required,id" validate_name:"ファイルID"`
-	AfterParentDirectoryId *int64 `json:"after_parent_directory_id" validate:"id" validate_name:"移動先の親フォルダ"`
+	FileId                 int64 `json:"file_id" validate:"required,id" validate_name:"ファイルID"`
+	AfterParentDirectoryId int64 `json:"after_parent_directory_id" validate:"id" validate_name:"移動先の親フォルダ"`
 }
 
 type DeleteFileRequest struct {

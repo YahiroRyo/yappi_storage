@@ -1,3 +1,0 @@
-2024-12-09 16:46:56 [192.168.48.1]:52056 400 - POST /users/registration すでに使用しているメールアドレスです。
-エラーが発生しました。
-pq: duplicate key value violates unique constraint "users_email_key"

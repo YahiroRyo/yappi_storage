@@ -87,6 +87,35 @@ func (controller *Controller) RegistrationFile(ctx *fiber.Ctx) error {
 	return ctx.JSON(file)
 }
 
+func (controller *Controller) RenameFile(ctx *fiber.Ctx) error {
+	req := request.RenameFileRequest{}
+
+	if err := ctx.BodyParser(&req); err != nil {
+		return err
+	}
+
+	if err := validate.Validate(req); err != nil {
+		return err
+	}
+
+	sess, err := session.GetSession(ctx)
+	if err != nil {
+		return err
+	}
+
+	user, err := controller.GetLoggedInUserService.Execute(sess)
+	if err != nil {
+		return err
+	}
+
+	file, err := controller.RenameFileService.Execute(*user, req.FileId, req.Name)
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(file)
+}
+
 func (controller *Controller) MoveFile(ctx *fiber.Ctx) error {
 	req := request.MoveFileRequest{}
 
@@ -108,7 +137,7 @@ func (controller *Controller) MoveFile(ctx *fiber.Ctx) error {
 		return err
 	}
 
-	file, err := controller.MoveFileService.Execute(*user, req.FileId, *req.AfterParentDirectoryId)
+	file, err := controller.MoveFileService.Execute(*user, req.FileId, req.AfterParentDirectoryId)
 	if err != nil {
 		return err
 	}

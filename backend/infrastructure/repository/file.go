@@ -200,7 +200,7 @@ func (repo *FileRepository) UpdateFile(tx *sqlx.Tx, user user.User, file file.Fi
 }
 
 func (repo *FileRepository) UploadFileChunk(file []byte, filename string) (*string, error) {
-	f, err := os.OpenFile(fmt.Sprintf("../../storage/files/%s", filename), os.O_CREATE|os.O_APPEND, 0666)
+	f, err := os.OpenFile(fmt.Sprintf("../../storage/files/%s", filename), os.O_CREATE|os.O_RDWR|os.O_APPEND, 0666)
 	if err != nil {
 		return nil, err
 	}

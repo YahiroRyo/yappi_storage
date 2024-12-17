@@ -93,6 +93,10 @@ func main() {
 			FileRepo:    &fileRepo,
 			ChatGPTRepo: &chatGPTRepo,
 		},
+		RenameFileService: service.RenameFileService{
+			Conn:     conn,
+			FileRepo: &fileRepo,
+		},
 		MoveFileService: service.MoveFileService{
 			Conn:     conn,
 			FileRepo: &fileRepo,
@@ -125,6 +129,8 @@ func main() {
 		},
 	})
 
-	app.Listen(":8000")
-	grpcServer.Listen(":9000")
+	go grpcServer.Listen(":9000")
+	go app.Listen(":8000")
+
+	select {}
 }
