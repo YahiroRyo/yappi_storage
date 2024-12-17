@@ -58,20 +58,31 @@ func (controller *Controller) GetFiles(ctx *fiber.Ctx) error {
 	return nil
 }
 
-func (controller *Controller) UploadFile(ctx *fiber.Ctx) error {
+func (controller *Controller) RegistrationFile(ctx *fiber.Ctx) error {
+	req := request.RegistrationFileRequest{}
+
+	if err := ctx.BodyParser(&req); err != nil {
+		return err
+	}
+
+	if err := validate.Validate(req); err != nil {
+		return err
+	}
+
 	sess, err := session.GetSession(ctx)
 	if err != nil {
 		return err
 	}
 
-	handler, err := ctx.FormFile("data")
-
-	isUploaded, err := controller.UploadFileService.Execute(sess, handler)
+	user, err := controller.GetLoggedInUserService.Execute(sess)
 	if err != nil {
 		return err
 	}
 
-	return ctx.JSON(struct {
-		IsUploaded bool `json:"is_uploaded"`
-	}{IsUploaded: isUploaded})
+	file, err := controller.RegistrationFileService.Execute(*user, req.Url, req.ParentDirectoryId)
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(file)
 }

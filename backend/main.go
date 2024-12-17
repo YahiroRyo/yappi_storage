@@ -68,11 +68,6 @@ func main() {
 			FileRepo:    &fileRepo,
 			ChatGPTRepo: &chatGPTRepo,
 		},
-		UploadFileService: service.UploadFileService{
-			UserRepo:    &userRepo,
-			FileRepo:    &fileRepo,
-			ChatGPTRepo: &chatGPTRepo,
-		},
 
 		GetLoggedInUserService: service.GetLoggedInUserService{
 			Conn:     conn,

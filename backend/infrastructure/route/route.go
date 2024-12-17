@@ -10,6 +10,7 @@ func SetRoutes(app *fiber.App, controller controller.Controller, middleware midd
 	files := app.Group("/files").Use(middleware.AuthenticateLoggedInUserMiddleware)
 	{
 		files.Get("/", controller.GetFiles)
+		files.Post("/", controller.RegistrationFile)
 	}
 
 	users := app.Group("/users")

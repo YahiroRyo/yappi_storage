@@ -2,7 +2,6 @@ package repository
 
 import (
 	"errors"
-	"mime/multipart"
 
 	"github.com/YahiroRyo/yappi_storage/backend/domain/file"
 	"github.com/YahiroRyo/yappi_storage/backend/domain/user"
@@ -21,7 +20,7 @@ type FileRepositoryInterface interface {
 		pageSize int,
 	) (*file.Files, error)
 	RegistrationFile(tx *sqlx.Tx, user user.User, file file.File) (*file.File, error)
-	UploadChunk(id string, fileHandler *multipart.FileHeader) (bool, error)
+	UploadFileChunk(file []byte) (bool, error)
 }
 
 type FileRepository struct {
@@ -146,7 +145,4 @@ func (repo *FileRepository) RegistrationFile(tx *sqlx.Tx, user user.User, file f
 	}
 
 	return &file, nil
-}
-
-func (repo *FileRepository) UploadChunk(id string, fileHandler *multipart.FileHeader) (bool, error) {
 }

@@ -1,0 +1,17 @@
+syntax = "proto3";
+package file;
+
+option go_package = "../";
+
+service FileService {
+    rpc UploadFile(UploadFileRequest) returns (UploadFileResponse);
+}
+
+message UploadFileRequest {
+    bytes file = 1;
+}
+
+message UploadFileResponse {
+    bool is_finished_upload = 1;
+    string url = 2;
+}

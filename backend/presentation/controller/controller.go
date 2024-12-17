@@ -7,7 +7,6 @@ type Controller struct {
 	GetFilesService         service.GetFilesService
 	SearchFilesService      service.SearchFilesService
 	RegistrationFileService service.RegistrationFileService
-	UploadFileService       service.UploadFileService
 
 	LoginService            service.LoginService
 	RegistrationUserService service.RegistrationUserService
