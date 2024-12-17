@@ -18,7 +18,7 @@ type RegistrationFileService struct {
 	ChatGPTRepo repository.ChatGPTRepositoryInterface
 }
 
-func (service *RegistrationFileService) Execute(user user.User, url string, parentDirectoryID *string) (*file.File, error) {
+func (service *RegistrationFileService) Execute(user user.User, url string, parentDirectoryID *int64) (*file.File, error) {
 	tx, err := service.Conn.Beginx()
 	if err != nil {
 		return nil, err

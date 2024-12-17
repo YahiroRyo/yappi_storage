@@ -8,6 +8,6 @@ type UploadFileChunkService struct {
 	FileRepo repository.FileRepositoryInterface
 }
 
-func (service *UploadFileChunkService) Execute(file []byte) (bool, error) {
-
+func (service *UploadFileChunkService) Execute(file []byte, filename string) (*string, error) {
+	return service.FileRepo.UploadFileChunk(file, filename)
 }

@@ -6,10 +6,13 @@ import (
 	"os"
 	"time"
 
+	pb "github.com/YahiroRyo/yappi_storage/backend/grpc"
+	"github.com/YahiroRyo/yappi_storage/backend/helper"
 	"github.com/YahiroRyo/yappi_storage/backend/infrastructure/database"
 	"github.com/YahiroRyo/yappi_storage/backend/infrastructure/repository"
 	"github.com/YahiroRyo/yappi_storage/backend/infrastructure/route"
 	"github.com/YahiroRyo/yappi_storage/backend/presentation/controller"
+	"github.com/YahiroRyo/yappi_storage/backend/presentation/grpc"
 	"github.com/YahiroRyo/yappi_storage/backend/presentation/handling"
 	"github.com/YahiroRyo/yappi_storage/backend/presentation/middleware"
 	"github.com/YahiroRyo/yappi_storage/backend/service"
@@ -21,6 +24,12 @@ import (
 )
 
 func main() {
+	grpcServer := helper.NewGrpcServer()
+
+	userRepo := repository.UserRepository{}
+	fileRepo := repository.FileRepository{}
+	chatGPTRepo := repository.ChatGPTRepository{}
+
 	app := fiber.New(fiber.Config{
 		JSONEncoder:  json.Marshal,
 		JSONDecoder:  json.Unmarshal,
@@ -54,12 +63,22 @@ func main() {
 
 	defer file.Close()
 
-	userRepo := repository.UserRepository{}
-	fileRepo := repository.FileRepository{}
-	chatGPTRepo := repository.ChatGPTRepository{}
+	pb.RegisterFileServiceServer(&grpcServer.Server, &grpc.GrpcController{
+		UploadFileChunkService: service.UploadFileChunkService{
+			FileRepo: &fileRepo,
+		},
+		GetLoggedInUserService: service.GetLoggedInUserService{
+			Conn:     conn,
+			UserRepo: &userRepo,
+		},
+	})
 
 	route.SetRoutes(app, controller.Controller{
 		GetFilesService: service.GetFilesService{
+			Conn:     conn,
+			FileRepo: &fileRepo,
+		},
+		GetFileService: service.GetFileService{
 			Conn:     conn,
 			FileRepo: &fileRepo,
 		},
@@ -67,6 +86,20 @@ func main() {
 			Conn:        conn,
 			FileRepo:    &fileRepo,
 			ChatGPTRepo: &chatGPTRepo,
+		},
+		RegistrationFileService: service.RegistrationFileService{
+			Conn:        conn,
+			UserRepo:    &userRepo,
+			FileRepo:    &fileRepo,
+			ChatGPTRepo: &chatGPTRepo,
+		},
+		MoveFileService: service.MoveFileService{
+			Conn:     conn,
+			FileRepo: &fileRepo,
+		},
+		DeleteFileService: service.DeleteFileService{
+			Conn:     conn,
+			FileRepo: &fileRepo,
 		},
 
 		GetLoggedInUserService: service.GetLoggedInUserService{
@@ -93,4 +126,5 @@ func main() {
 	})
 
 	app.Listen(":8000")
+	grpcServer.Listen(":9000")
 }

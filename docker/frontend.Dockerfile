@@ -1,8 +1,8 @@
-FROM debian
+FROM node:22
 
 RUN apt-get update && apt-get install -y \
    zip \
    unzip \
-   curl
+   curl \
+   protobuf-compiler
 
-RUN curl -fsSL https://bun.sh/install | bash 

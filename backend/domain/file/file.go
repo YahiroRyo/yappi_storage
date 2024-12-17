@@ -9,7 +9,7 @@ import (
 type File struct {
 	ID                int64          `json:"id"`
 	UserID            int64          `json:"user_id"`
-	ParentDirectoryID *string        `json:"parent_directory_id"`
+	ParentDirectoryID *int64         `json:"parent_directory_id"`
 	Embedding         *vector.Vector `json:"embedding"`
 	Kind              FileKind       `json:"kind"`
 	Url               *string        `json:"url"`

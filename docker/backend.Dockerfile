@@ -11,6 +11,8 @@ RUN go install github.com/cosmtrek/air@v1.29.0 & \
 
 RUN go mod download
 
+RUN apt update -y && apt install -y protobuf-compiler
+
 RUN curl -sL https://deb.nodesource.com/setup_22.x | bash -
     RUN apt-get -y install nodejs
     RUN npm install npm@10.2.4 -g

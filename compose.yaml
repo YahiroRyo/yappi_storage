@@ -6,6 +6,7 @@ services:
     working_dir: /home/frontend
     volumes:
       - ./frontend:/home/frontend
+      - ./proto:/home/frontend/proto
     ports:
       - 127.0.0.1:3000:3000
     depends_on:
@@ -18,6 +19,7 @@ services:
       dockerfile: ./docker/backend.Dockerfile
     volumes:
       - ./backend:/go/src/github.com/YahiroRyo/yappi_storage/backend
+      - ./proto:/go/src/github.com/YahiroRyo/yappi_storage/backend/proto
     tty: true
     ports:
       - 127.0.0.1:8000:8000

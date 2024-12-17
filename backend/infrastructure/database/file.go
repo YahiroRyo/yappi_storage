@@ -10,7 +10,7 @@ import (
 type File struct {
 	ID                int64     `db:"id"`
 	UserID            int64     `db:"user_id"`
-	ParentDirectoryID *string   `db:"parent_directory_id"`
+	ParentDirectoryID *int64    `db:"parent_directory_id"`
 	Embedding         *Vector   `db:"embedding"`
 	Kind              string    `db:"kind"`
 	Url               *string   `db:"url"`

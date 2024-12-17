@@ -86,3 +86,65 @@ func (controller *Controller) RegistrationFile(ctx *fiber.Ctx) error {
 
 	return ctx.JSON(file)
 }
+
+func (controller *Controller) MoveFile(ctx *fiber.Ctx) error {
+	req := request.MoveFileRequest{}
+
+	if err := ctx.BodyParser(&req); err != nil {
+		return err
+	}
+
+	if err := validate.Validate(req); err != nil {
+		return err
+	}
+
+	sess, err := session.GetSession(ctx)
+	if err != nil {
+		return err
+	}
+
+	user, err := controller.GetLoggedInUserService.Execute(sess)
+	if err != nil {
+		return err
+	}
+
+	file, err := controller.MoveFileService.Execute(*user, req.FileId, *req.AfterParentDirectoryId)
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(file)
+}
+
+func (controller *Controller) DeleteFile(ctx *fiber.Ctx) error {
+	req := request.DeleteFileRequest{}
+
+	if err := ctx.BodyParser(&req); err != nil {
+		return err
+	}
+
+	if err := validate.Validate(req); err != nil {
+		return err
+	}
+
+	sess, err := session.GetSession(ctx)
+	if err != nil {
+		return err
+	}
+
+	user, err := controller.GetLoggedInUserService.Execute(sess)
+	if err != nil {
+		return err
+	}
+
+	file, err := controller.GetFileService.Execute(*user, req.FileId)
+	if err != nil {
+		return err
+	}
+
+	if err != controller.DeleteFileService.Execute(*user, req.FileId) {
+		return err
+	}
+
+	return ctx.Status(200).JSON(file)
+}

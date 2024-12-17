@@ -4,14 +4,14 @@ package file;
 option go_package = "../";
 
 service FileService {
-    rpc UploadFile(UploadFileRequest) returns (UploadFileResponse);
+    rpc UploadFile(stream UploadFileRequest) returns (UploadFileResponse);
 }
 
 message UploadFileRequest {
     bytes file = 1;
+    string file_name=2;
 }
 
 message UploadFileResponse {
-    bool is_finished_upload = 1;
-    string url = 2;
+    string url = 1;
 }
