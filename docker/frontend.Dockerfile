@@ -4,5 +4,5 @@ RUN apt-get update && apt-get install -y \
    zip \
    unzip \
    curl \
-   protobuf-compiler
-
+   protobuf-compiler \
+   xdg-utils

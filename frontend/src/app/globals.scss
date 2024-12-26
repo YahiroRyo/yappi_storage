@@ -1,0 +1,8 @@
+body {
+  user-select: none;
+  -webkit-user-select: none; // Google Chrome、Safari
+  -webkit-user-drag: none;
+  -moz-user-select: none; // Firefox
+  -khtml-user-select: none;
+  -khtml-user-drag: none;
+}

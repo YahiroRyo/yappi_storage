@@ -1,0 +1,24 @@
+.table {
+  width: 100%;
+  border-collapse: collapse;
+
+  &__head {
+  }
+
+  &__body {
+  }
+
+  &__tr {
+    border: 1px solid transparent;
+    border-bottom-color: #c7c7c7;
+    box-sizing: border-box;
+    cursor: pointer;
+  }
+
+  &__th {
+  }
+
+  &__td {
+    padding: 0 1rem;
+  }
+}

@@ -12,6 +12,18 @@ services:
     depends_on:
       - backend
     tty: true
+
+  storybook:
+    build:
+      context: .
+      dockerfile: ./docker/frontend.Dockerfile
+    working_dir: /home/frontend
+    volumes:
+      - ./frontend:/home/frontend
+    ports:
+      - 127.0.0.1:6006:6006
+    command: sh -c "npm run storybook"
+    tty: true
     
   backend:
     build:
