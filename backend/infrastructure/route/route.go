@@ -15,6 +15,7 @@ func SetRoutes(app *fiber.App, controller controller.Controller, middleware midd
 	{
 		files.Get("/", controller.GetFiles)
 		files.Post("/", controller.RegistrationFile)
+		files.Post("/directory", controller.RegistrationDirectory)
 		files.Put("/move", controller.MoveFile)
 		files.Put("/rename", controller.RenameFile)
 		files.Delete("/", controller.DeleteFile)

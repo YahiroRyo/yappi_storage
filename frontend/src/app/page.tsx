@@ -1,5 +1,6 @@
 "use client";
 
+import { createDirectory } from "@/api/files/createDirectory";
 import { getFiles, SuccessedResponse } from "@/api/files/getFiles";
 import { Button } from "@/components/ui/button";
 import { GridVerticalRow } from "@/components/ui/grid/gridVerticalRow";
@@ -11,10 +12,11 @@ import { Text } from "@/components/ui/text";
 import { uiConfig } from "@/components/ui/uiConfig";
 import { useMousePosition } from "@/hooks/useMousePosition";
 import { redirect } from "next/navigation";
-import { useEffect, useState } from "react";
+import { FormEventHandler, useEffect, useState } from "react";
 
 export default function Home() {
   const [res, setRes] = useState<SuccessedResponse>();
+  const [refreshFiles, setRefreshFiles] = useState(false);
   const [processedFiles, setProcessedFiles] = useState<
     {
       種類: string;
@@ -55,12 +57,20 @@ export default function Home() {
         })
       );
     })();
-  }, []);
+  }, [refreshFiles]);
 
-  const onCreateDirectory = () => {
+  const onCreateDirectory: FormEventHandler<HTMLFormElement> = async (e) => {
+    e.preventDefault();
     setCreateDirectoryFormData((value) => ({ ...value, disabled: true }));
 
-    setCreateDirectoryFormData({ name: "", disabled: false });
+    const res = await createDirectory(createDirectoryFormData.name, undefined);
+
+    if (res.status === 200) {
+      setIsOpendedCreateDirectoryModal(false);
+      setCreateDirectoryFormData({ name: "", disabled: false });
+      setRefreshFiles((value) => !value);
+      return;
+    }
   };
 
   return (

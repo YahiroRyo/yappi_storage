@@ -89,6 +89,12 @@ func main() {
 			FileRepo:    &fileRepo,
 			ChatGPTRepo: &chatGPTRepo,
 		},
+		RegistrationDirectoryService: service.RegistrationDirectoryService{
+			Conn:        conn,
+			UserRepo:    &userRepo,
+			FileRepo:    &fileRepo,
+			ChatGPTRepo: &chatGPTRepo,
+		},
 		RegistrationFileService: service.RegistrationFileService{
 			Conn:        conn,
 			UserRepo:    &userRepo,

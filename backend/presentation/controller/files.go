@@ -58,6 +58,35 @@ func (controller *Controller) GetFiles(ctx *fiber.Ctx) error {
 	return nil
 }
 
+func (controller *Controller) RegistrationDirectory(ctx *fiber.Ctx) error {
+	req := request.RegistrationDirectoryRequest{}
+
+	if err := ctx.BodyParser(&req); err != nil {
+		return err
+	}
+
+	if err := validate.Validate(req); err != nil {
+		return err
+	}
+
+	sess, err := session.GetSession(ctx)
+	if err != nil {
+		return err
+	}
+
+	user, err := controller.GetLoggedInUserService.Execute(sess)
+	if err != nil {
+		return err
+	}
+
+	file, err := controller.RegistrationDirectoryService.Execute(*user, req.Name, req.ParentDirectoryId)
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(file)
+}
+
 func (controller *Controller) RegistrationFile(ctx *fiber.Ctx) error {
 	req := request.RegistrationFileRequest{}
 

@@ -19,8 +19,14 @@ func (e ValidationError) Error() string {
 
 func Validate(s interface{}) error {
 	var result error
+	val := reflect.ValueOf(s)
 
-	val := reflect.ValueOf(s).Elem()
+	for {
+		if val.Kind() != reflect.Ptr {
+			break
+		}
+		val = val.Elem()
+	}
 
 	for i := 0; i < val.NumField(); i++ {
 		valueField := val.Field(i)

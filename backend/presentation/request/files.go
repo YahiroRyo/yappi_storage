@@ -7,6 +7,11 @@ type GetFilesRequest struct {
 	CurrentPageCount  int     `query:"current_page_count" validate:"required,max=512" validate_name:"ページあたりの個数"`
 }
 
+type RegistrationDirectoryRequest struct {
+	Name              string `json:"name" validate:"required,max_len=128" validate_name:"ディレクトリ名"`
+	ParentDirectoryId *int64 `json:"parent_directory_id" validate:"id" validate_name:"親フォルダ"`
+}
+
 type RegistrationFileRequest struct {
 	ParentDirectoryId *int64 `json:"parent_directory_id" validate:"id" validate_name:"親フォルダ"`
 	Url               string `json:"url" validate:"required,url" validate_name:"URL"`
