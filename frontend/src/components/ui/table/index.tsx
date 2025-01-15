@@ -1,7 +1,7 @@
-import { CSSProperties, useEffect, useState } from "react";
 import styles from "./index.module.scss";
+import { CSSProperties, useEffect, useState } from "react";
 import { Text } from "../text";
-import { config } from "../config";
+import { uiConfig } from "../uiConfig";
 import { Select } from "../select";
 import { useMousePosition } from "@/hooks/useMousePosition";
 
@@ -64,7 +64,11 @@ export const SelectableTable = <T extends RowData>({
           <tr style={rowStyle} className={styles.table__tr}>
             {headers.map((header) => (
               <th key={header}>
-                <Text fontWeight={500} size="medium" color={config.color.text}>
+                <Text
+                  fontWeight={500}
+                  size="medium"
+                  color={uiConfig.color.text.main}
+                >
                   {header}
                 </Text>
               </th>

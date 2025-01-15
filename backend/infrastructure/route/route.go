@@ -7,6 +7,10 @@ import (
 )
 
 func SetRoutes(app *fiber.App, controller controller.Controller, middleware middleware.Middleware) {
+	app.Get("/", func(ctx *fiber.Ctx) error {
+		return ctx.Send(([]byte)("hello"))
+	})
+
 	files := app.Group("/files").Use(middleware.AuthenticateLoggedInUserMiddleware)
 	{
 		files.Get("/", controller.GetFiles)
@@ -18,6 +22,7 @@ func SetRoutes(app *fiber.App, controller controller.Controller, middleware midd
 
 	users := app.Group("/users")
 	{
+		users.Get("", controller.GetLoggedInUser)
 		users.Post("/login", controller.Login)
 		users.Post("/registration", controller.Registration)
 		users.Use(middleware.AuthenticateLoggedInUserMiddleware).Post("/logout", controller.Logout)

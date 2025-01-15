@@ -18,6 +18,7 @@ import (
 	"github.com/YahiroRyo/yappi_storage/backend/service"
 	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
 	"github.com/joho/godotenv"
@@ -53,6 +54,7 @@ func main() {
 		log.Fatalf("error opening file: %v", err)
 	}
 
+	app.Use(cors.New())
 	app.Use(requestid.New())
 	app.Use(logger.New(logger.Config{
 		Output:     file,

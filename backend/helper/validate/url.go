@@ -10,7 +10,7 @@ func Url(value string, name string) error {
 
 	if isMatched := re.MatchString(value); !isMatched {
 		return ValidationError{
-			Code:    401,
+			Code:    400,
 			Message: fmt.Sprintf("%sはURLではありません。", name),
 		}
 	}

@@ -1,29 +1,37 @@
 package validate
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 )
 
 func Required(value reflect.Value, name string) error {
-	switch value.Kind() {
+	var validValue = value
+	for {
+		if validValue.Kind() != reflect.Ptr {
+			break
+		}
+		validValue = value.Elem()
+	}
+	switch validValue.Kind() {
 	case reflect.Ptr, reflect.Interface, reflect.Slice, reflect.Map, reflect.Chan:
-		if value.IsNil() {
+		if validValue.IsNil() {
 			return ValidationError{
-				Code:    401,
+				Code:    400,
 				Message: fmt.Sprintf("%sは必須項目です。", name),
 			}
 		}
 	case reflect.String:
-		if value.String() == "" {
+		if validValue.String() == "" {
 			return ValidationError{
-				Code:    401,
+				Code:    400,
 				Message: fmt.Sprintf("%sは必須項目です。", name),
 			}
 		}
+	case reflect.Int:
+		return nil
 	default:
-		return errors.New("unsupported type for Required validation")
+		return fmt.Errorf("unsupported type for Required validation: %s", validValue.Kind().String())
 	}
 
 	return nil

@@ -5,9 +5,10 @@ type Props = {
   children?: React.ReactNode;
   x: number;
   y: number;
+  onClose?: () => void;
 };
 
-export const Select = ({ children, x, y }: Props) => {
+export const Select = ({ children, x, y, onClose }: Props) => {
   const [initializedMousePosition] = useState({
     x,
     y,
@@ -29,8 +30,11 @@ export const Select = ({ children, x, y }: Props) => {
   }
 
   return (
-    <div style={style} className={styles.select}>
-      {children}
-    </div>
+    <>
+      <div className={styles.selectBackground} onClick={onClose} />
+      <div style={style} className={styles.select}>
+        {children}
+      </div>
+    </>
   );
 };

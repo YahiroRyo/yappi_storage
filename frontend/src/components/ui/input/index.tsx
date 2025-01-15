@@ -1,3 +1,5 @@
+"use client";
+
 import { CSSProperties, HTMLInputTypeAttribute, useState } from "react";
 import styles from "./index.module.scss";
 
@@ -11,6 +13,7 @@ type Props = {
     placeholderColor?: string;
     focusColor?: string;
   };
+  boxShadow?: string;
   focusBorder?: string;
   focusBoxShadow?: string;
   padding?: string;
@@ -24,6 +27,7 @@ export const Input = ({
   radius,
   border,
   value,
+  boxShadow,
   focusBorder,
   focusBoxShadow,
   color,
@@ -62,6 +66,10 @@ export const Input = ({
     if (color.focusColor && isFocused) {
       style.color = color.focusColor;
     }
+  }
+
+  if (boxShadow) {
+    style.boxShadow = boxShadow;
   }
 
   if (focusBorder && isFocused) {

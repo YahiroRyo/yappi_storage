@@ -3,6 +3,7 @@ package validate
 import (
 	"errors"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -29,6 +30,10 @@ func Validate(s interface{}) error {
 		validateName := typeField.Tag.Get("validate_name")
 
 		validates := strings.Split(strings.ReplaceAll(validate, " ", ""), ",")
+
+		if err := Required(valueField, validateName); err != nil && !slices.Contains(validates, "required") {
+			continue
+		}
 
 		for j := 0; j < len(validates); j++ {
 			var equaledValue int

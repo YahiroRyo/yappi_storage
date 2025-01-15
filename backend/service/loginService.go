@@ -21,15 +21,22 @@ func (service *LoginService) Execute(sess *session.Session, email string, passwo
 
 	sess.Set("id", sessionId)
 
+	if err := sess.Save(); err != nil {
+		return nil, err
+	}
+
 	tx, err := service.Conn.Beginx()
 	if err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 
 	user, err := service.UserRepo.Login(tx, email, password, *sessionId)
 	if err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 
+	tx.Commit()
 	return user, err
 }

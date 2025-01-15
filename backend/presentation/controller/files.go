@@ -11,7 +11,7 @@ import (
 func (controller *Controller) GetFiles(ctx *fiber.Ctx) error {
 	req := request.GetFilesRequest{}
 
-	if err := ctx.BodyParser(&req); err != nil {
+	if err := ctx.QueryParser(&req); err != nil {
 		return err
 	}
 
@@ -29,7 +29,7 @@ func (controller *Controller) GetFiles(ctx *fiber.Ctx) error {
 		return err
 	}
 
-	if req.Query == nil {
+	if *req.Query == "" {
 		files, err := controller.GetFilesService.Execute(*user, req.ParentDirectoryId, req.CurrentPageCount, req.PageSize)
 		if err != nil {
 			return err

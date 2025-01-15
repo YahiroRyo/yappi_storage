@@ -1,5 +1,9 @@
+"use client";
+
 import { CSSProperties, useState } from "react";
 import styles from "./index.module.scss";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 type Props = {
   color?: {
@@ -10,7 +14,10 @@ type Props = {
     disabledBackgroundColor?: string;
     disabledColor?: string;
     hoverBackgroundColor?: string;
+    sameHrefBackgroundColor?: string;
   };
+  type?: "submit" | "button";
+  textAlign?: "center" | "left" | "right";
   padding?: string;
   radius?: string;
   border?: string;
@@ -18,6 +25,7 @@ type Props = {
   onFocus?: () => void;
   onClick?: () => void;
   onContextMenu?: () => void;
+  href?: string;
   children?: React.ReactNode;
 };
 
@@ -25,13 +33,17 @@ export const Button = ({
   color,
   padding,
   radius,
+  textAlign,
   border,
   disabled,
+  type,
   onFocus,
   onClick,
   onContextMenu,
+  href,
   children,
 }: Props) => {
+  const pathname = usePathname();
   const [isSelected, setIsSelected] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -50,6 +62,9 @@ export const Button = ({
     if (color.hoverBackgroundColor && isHovered) {
       style.backgroundColor = color.hoverBackgroundColor;
     }
+    if (color.sameHrefBackgroundColor && href && pathname === href) {
+      style.backgroundColor = color.sameHrefBackgroundColor;
+    }
     if (color.selectedTextColor && isSelected) {
       style.color = color.selectedTextColor;
     }
@@ -65,34 +80,57 @@ export const Button = ({
     style.padding = padding;
   }
 
+  if (textAlign) {
+    style.textAlign = textAlign;
+  }
+
   if (radius) {
     style.borderRadius = radius;
+
+    // TopLeft TopRight BottomRight BottomLeft
+    if (radius.includes(" ")) {
+      const radiuses = radius.split(" ");
+      style.borderTopLeftRadius = radiuses[0];
+      style.borderTopRightRadius = radiuses[1];
+      style.borderBottomRightRadius = radiuses[2];
+      style.borderBottomLeftRadius = radiuses[3];
+    }
   }
 
   if (border) {
     style.border = border;
   }
 
+  const props = {
+    className: styles.button,
+    style,
+    disabled,
+    onFocus,
+    onClick: () => {
+      setIsSelected((value) => !value);
+      if (onClick) {
+        onClick();
+      }
+    },
+    onMouseEnter: () => {
+      setIsHovered(true);
+    },
+    onMouseLeave: () => {
+      setIsHovered(false);
+    },
+    onContextMenu,
+  };
+
+  if (href) {
+    return (
+      <Link {...props} href={href}>
+        {children}
+      </Link>
+    );
+  }
+
   return (
-    <button
-      className={styles.button}
-      style={style}
-      disabled={disabled}
-      onFocus={onFocus}
-      onClick={() => {
-        setIsSelected((value) => !value);
-        if (onClick) {
-          onClick();
-        }
-      }}
-      onMouseEnter={() => {
-        setIsHovered(true);
-      }}
-      onMouseLeave={() => {
-        setIsHovered(false);
-      }}
-      onContextMenu={onContextMenu}
-    >
+    <button type={type} {...props}>
       {children}
     </button>
   );

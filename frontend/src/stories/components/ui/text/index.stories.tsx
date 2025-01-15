@@ -1,4 +1,4 @@
-import { config } from "@/components/ui/config";
+import { uiConfig } from "@/components/ui/uiConfig";
 import { Text } from "@/components/ui/text";
 import type { Meta, StoryObj } from "@storybook/react";
 
@@ -17,7 +17,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Primary: Story = {
   args: {
-    color: config.color.text,
+    color: uiConfig.color.text.main,
     size: "medium",
     children: "テスト",
   },

@@ -6,11 +6,11 @@ import (
 
 func Min(value int, min int, name string) error {
 	if value >= min {
-		return ValidationError{
-			Code:    401,
-			Message: fmt.Sprintf("%sは%d以下でなければなりません。", name, min),
-		}
+		return nil
 	}
 
-	return nil
+	return ValidationError{
+		Code:    400,
+		Message: fmt.Sprintf("%sは%d以上でなければなりません。", name, min),
+	}
 }

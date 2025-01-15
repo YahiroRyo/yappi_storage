@@ -12,6 +12,8 @@ services:
     depends_on:
       - backend
     tty: true
+    networks:
+      - db
 
   storybook:
     build:

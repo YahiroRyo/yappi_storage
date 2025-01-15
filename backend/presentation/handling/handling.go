@@ -2,9 +2,11 @@ package handling
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/YahiroRyo/yappi_storage/backend/helper/validate"
 	"github.com/YahiroRyo/yappi_storage/backend/infrastructure/repository"
+	"github.com/YahiroRyo/yappi_storage/backend/presentation/middleware"
 	"github.com/YahiroRyo/yappi_storage/backend/presentation/response"
 	"github.com/YahiroRyo/yappi_storage/backend/service"
 	"github.com/gofiber/fiber/v2"
@@ -14,6 +16,12 @@ func bignessLogicErrorHandler(ctx *fiber.Ctx, err error) bool {
 	var alreadyUsedEmailAddress service.AlreadyUsedEmailAddressError
 	if errors.As(err, &alreadyUsedEmailAddress) {
 		ctx.Status(alreadyUsedEmailAddress.Code).JSON(response.ErrorResponse{Message: alreadyUsedEmailAddress.Message})
+		return true
+	}
+
+	var notLoggedInError middleware.NotLoggedInError
+	if errors.As(err, &notLoggedInError) {
+		ctx.Status(notLoggedInError.Code).JSON(response.ErrorResponse{Message: notLoggedInError.Message})
 		return true
 	}
 
@@ -44,10 +52,12 @@ func basicErrorHandler(ctx *fiber.Ctx, err error) bool {
 
 func ErrorHandler(ctx *fiber.Ctx, err error) error {
 	code := fiber.StatusInternalServerError
+	fmt.Printf("%v", err)
 
 	ctx.Set(fiber.HeaderContentType, fiber.MIMETextPlainCharsetUTF8)
 
 	var validationErr validate.ValidationError
+
 	if errors.As(err, &validationErr) {
 		return response.ValidationErrorResponse(ctx, err)
 	}

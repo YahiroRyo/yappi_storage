@@ -1,4 +1,4 @@
-import { config } from "@/components/ui/config";
+import { uiConfig } from "@/components/ui/uiConfig";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Input } from "@/components/ui/input";
 
@@ -21,10 +21,10 @@ export const Primary: Story = {
     radius: "32px",
     padding: "1rem",
     color: {
-      backgroundColor: config.color.surfaceHover,
-      focusBackgroundColor: config.color.surface,
-      placeholderColor: config.color.text,
-      focusColor: config.color.text,
+      backgroundColor: uiConfig.color.surface.high,
+      focusBackgroundColor: uiConfig.color.surface.main,
+      placeholderColor: uiConfig.color.text.main,
+      focusColor: uiConfig.color.text.main,
     },
     focusBoxShadow: `0px 2px 4px -1px rgba(0, 0, 0, 0.2),
     0px 4px 5px 0px rgba(0, 0, 0, 0.14), 0px 1px 10px 0px rgba(0, 0, 0, 0.12),

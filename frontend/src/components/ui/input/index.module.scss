@@ -9,6 +9,8 @@
 .input {
   border: 0;
   background-color: #fff;
-  outline: 0;
+  outline: none;
   transition: 0.2s;
+  box-sizing: border-box;
+  width: 100%;
 }

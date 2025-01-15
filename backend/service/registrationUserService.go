@@ -22,6 +22,7 @@ func (service *RegistrationUserService) Execute(sess *session.Session, email str
 
 	encriptedPassword, err := helper.EncryptPassword(password)
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
 

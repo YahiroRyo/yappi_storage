@@ -38,16 +38,16 @@ func (repo *FileRepository) GetFiles(db *sqlx.DB, user user.User, parentDirector
 		"offset":   pageSize * currentPageCount,
 	}
 
-	q := `SELECT id, user_id, parent_directory_id, embedding, kind, created_at, updated_at FROM files WHERE user_id = :user_id`
+	q := `SELECT id, user_id, parent_directory_id, embedding, kind, created_at, updated_at FROM files WHERE user_id = :user_id `
 
 	if parentDirectoryId == nil {
-		q += `AND parent_directory_id = NULL`
+		q += `AND parent_directory_id = NULL `
 	} else {
-		q += `AND parent_directory_id = :parent_directory_id`
+		q += `AND parent_directory_id = :parent_directory_id `
 		args["parent_directory_id"] = parentDirectoryId
 	}
 
-	q += `LIMIT :pageSize OFFSET :offset`
+	q += `LIMIT :pageSize OFFSET :offset `
 
 	rows, err := db.NamedQuery(q, args)
 	if err != nil {
@@ -95,7 +95,7 @@ func (repo *FileRepository) SearchFiles(
 		"embedding": embedding,
 		"user_id":   user.ID,
 		"pageSize":  pageSize,
-		"offset":    pageSize * currentPageCount,
+		"offset":    pageSize * (currentPageCount - 1),
 	}
 
 	q := `

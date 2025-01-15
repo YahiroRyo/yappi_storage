@@ -21,7 +21,7 @@ type UserRepository struct {
 }
 
 func (repo *UserRepository) GetLoggedInUser(conn *sqlx.DB, sess *session.Session) (*user.User, error) {
-	row := conn.QueryRow("SELECT * WHERE session_id = $1", sess.Get("id"))
+	row := conn.QueryRow("SELECT * FROM users WHERE session_id = $1", sess.Get("id"))
 	if row == nil {
 		return nil, errors.Join(NotFoundError{Code: 404, Message: "データが存在しません。"}, row.Err())
 	}

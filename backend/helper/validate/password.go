@@ -22,7 +22,7 @@ func Password(value string, name string) error {
 	}
 
 	return ValidationError{
-		Code:    401,
+		Code:    400,
 		Message: fmt.Sprintf("%sには8文字以上で英字の小文字と大文字、数字、記号(._*-%%!)を含めてください。", name),
 	}
 }

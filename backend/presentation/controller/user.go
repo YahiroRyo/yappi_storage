@@ -62,6 +62,20 @@ func (controller *Controller) Registration(ctx *fiber.Ctx) error {
 	return nil
 }
 
+func (controller *Controller) GetLoggedInUser(ctx *fiber.Ctx) error {
+	sess, err := session.GetSession(ctx)
+	if err != nil {
+		return err
+	}
+
+	user, err := controller.GetLoggedInUserService.Execute(sess)
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(user)
+}
+
 func (controller *Controller) Logout(ctx *fiber.Ctx) error {
 	sess, err := session.GetSession(ctx)
 	if err != nil {

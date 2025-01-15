@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { config } from "@/components/ui/config";
+import { uiConfig } from "@/components/ui/uiConfig";
 import { Text } from "@/components/ui/text";
 import type { Meta, StoryObj } from "@storybook/react";
 import styles from "./index.module.scss";
@@ -20,10 +20,10 @@ type Story = StoryObj<typeof meta>;
 export const Primary: Story = {
   args: {
     color: {
-      backgroundColor: config.color.surface,
-      selectedBackgroundColor: config.color.bgSecondaryContainer,
-      textColor: config.color.text,
-      selectedTextColor: config.color.textSecondaryContainer,
+      backgroundColor: uiConfig.color.surface.main,
+      selectedBackgroundColor: uiConfig.color.bg.secondary.container,
+      textColor: uiConfig.color.text.main,
+      selectedTextColor: uiConfig.color.text.secondary.container,
     },
     radius: `32px`,
     children: (
