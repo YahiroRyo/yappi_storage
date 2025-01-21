@@ -15,6 +15,7 @@ type Props = {
     disabledColor?: string;
     hoverBackgroundColor?: string;
     sameHrefBackgroundColor?: string;
+    includeOtherLinkBackgroundColor?: string;
   };
   type?: "submit" | "button";
   textAlign?: "center" | "left" | "right";
@@ -26,6 +27,7 @@ type Props = {
   onClick?: () => void;
   onContextMenu?: () => void;
   href?: string;
+  otherLink?: string;
   children?: React.ReactNode;
 };
 
@@ -41,6 +43,7 @@ export const Button = ({
   onClick,
   onContextMenu,
   href,
+  otherLink,
   children,
 }: Props) => {
   const pathname = usePathname();
@@ -64,6 +67,13 @@ export const Button = ({
     }
     if (color.sameHrefBackgroundColor && href && pathname === href) {
       style.backgroundColor = color.sameHrefBackgroundColor;
+    }
+    if (
+      color.includeOtherLinkBackgroundColor &&
+      otherLink &&
+      pathname.includes(otherLink)
+    ) {
+      style.backgroundColor = color.includeOtherLinkBackgroundColor;
     }
     if (color.selectedTextColor && isSelected) {
       style.color = color.selectedTextColor;

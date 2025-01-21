@@ -7,10 +7,11 @@ import (
 )
 
 type User struct {
-	ID        int64     `db:"id"`
+	ID        string    `db:"id"`
 	Email     string    `db:"email"`
 	Password  string    `db:"password"`
 	SessionID *string   `db:"session_id"`
+	Token     *string   `db:"token"`
 	Icon      string    `db:"icon"`
 	CreatedAt time.Time `db:"created_at"`
 }

@@ -1,9 +1,18 @@
-export type FileKind = number;
+export type FileKind =
+  | "Unknown"
+  | "Directory"
+  | "Word"
+  | "Excel"
+  | "PowerPoint"
+  | "PDF"
+  | "Video"
+  | "Image"
+  | "Zip";
 
 export type File = {
-  id: number;
-  user_id: number;
-  parent_directory_id?: number;
+  id: string;
+  user_id: string;
+  parent_directory_id?: string;
   embedding?: number[];
   kind: FileKind;
   url?: string;

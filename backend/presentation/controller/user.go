@@ -3,6 +3,7 @@ package controller
 import (
 	"github.com/YahiroRyo/yappi_storage/backend/helper/validate"
 	"github.com/YahiroRyo/yappi_storage/backend/presentation/request"
+	"github.com/YahiroRyo/yappi_storage/backend/presentation/response"
 	"github.com/YahiroRyo/yappi_storage/backend/presentation/session"
 	"github.com/gofiber/fiber/v2"
 )
@@ -88,4 +89,25 @@ func (controller *Controller) Logout(ctx *fiber.Ctx) error {
 	}
 
 	return nil
+}
+
+func (controller *Controller) GenerateToken(ctx *fiber.Ctx) error {
+	sess, err := session.GetSession(ctx)
+	if err != nil {
+		return err
+	}
+
+	user, err := controller.GetLoggedInUserService.Execute(sess)
+	if err != nil {
+		return err
+	}
+
+	token, err := controller.GenerateTokenService.Execute(*user)
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(response.GenerateTokenResponse{
+		Token: *token,
+	})
 }

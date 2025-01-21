@@ -6,7 +6,7 @@ import (
 )
 
 func Url(value string, name string) error {
-	re := regexp.MustCompile(`^https?://(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:/[^\s]*)?$`)
+	re := regexp.MustCompile(`^https?://(?:[a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+(?::\d+)?(?:/[^\s]*)?$`)
 
 	if isMatched := re.MatchString(value); !isMatched {
 		return ValidationError{

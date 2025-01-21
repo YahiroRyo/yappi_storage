@@ -11,11 +11,18 @@ type DeleteFileService struct {
 	FileRepo repository.FileRepositoryInterface
 }
 
-func (service *DeleteFileService) Execute(user user.User, id int64) error {
+func (service *DeleteFileService) Execute(user user.User, id string) error {
 	tx, err := service.Conn.Beginx()
 	if err != nil {
 		return err
 	}
 
-	return service.FileRepo.DeleteFile(tx, user, id)
+	err = service.FileRepo.DeleteFile(tx, user, id)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	tx.Commit()
+	return nil
 }

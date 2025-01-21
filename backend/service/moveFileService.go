@@ -12,7 +12,7 @@ type MoveFileService struct {
 	FileRepo repository.FileRepositoryInterface
 }
 
-func (service *MoveFileService) Execute(user user.User, fileId int64, afterParentDirectoryId int64) (*file.File, error) {
+func (service *MoveFileService) Execute(user user.User, fileId string, afterParentDirectoryId string) (*file.File, error) {
 	tx, err := service.Conn.Beginx()
 	if err != nil {
 		return nil, err
@@ -20,6 +20,7 @@ func (service *MoveFileService) Execute(user user.User, fileId int64, afterParen
 
 	f, err := service.FileRepo.GetFileByID(service.Conn, user, fileId)
 	if err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 

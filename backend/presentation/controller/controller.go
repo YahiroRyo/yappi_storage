@@ -16,4 +16,5 @@ type Controller struct {
 	LoginService            service.LoginService
 	RegistrationUserService service.RegistrationUserService
 	LogoutService           service.LogoutService
+	GenerateTokenService    service.GenerateTokenService
 }

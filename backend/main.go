@@ -6,15 +6,14 @@ import (
 	"os"
 	"time"
 
-	pb "github.com/YahiroRyo/yappi_storage/backend/grpc"
-	"github.com/YahiroRyo/yappi_storage/backend/helper"
 	"github.com/YahiroRyo/yappi_storage/backend/infrastructure/database"
 	"github.com/YahiroRyo/yappi_storage/backend/infrastructure/repository"
 	"github.com/YahiroRyo/yappi_storage/backend/infrastructure/route"
+	"github.com/YahiroRyo/yappi_storage/backend/presentation/api"
 	"github.com/YahiroRyo/yappi_storage/backend/presentation/controller"
-	"github.com/YahiroRyo/yappi_storage/backend/presentation/grpc"
 	"github.com/YahiroRyo/yappi_storage/backend/presentation/handling"
 	"github.com/YahiroRyo/yappi_storage/backend/presentation/middleware"
+	"github.com/YahiroRyo/yappi_storage/backend/presentation/ws"
 	"github.com/YahiroRyo/yappi_storage/backend/service"
 	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
@@ -25,8 +24,6 @@ import (
 )
 
 func main() {
-	grpcServer := helper.NewGrpcServer()
-
 	userRepo := repository.UserRepository{}
 	fileRepo := repository.FileRepository{}
 	chatGPTRepo := repository.ChatGPTRepository{}
@@ -65,80 +62,102 @@ func main() {
 
 	defer file.Close()
 
-	pb.RegisterFileServiceServer(&grpcServer.Server, &grpc.GrpcController{
-		UploadFileChunkService: service.UploadFileChunkService{
-			FileRepo: &fileRepo,
-		},
-		GetLoggedInUserService: service.GetLoggedInUserService{
-			Conn:     conn,
-			UserRepo: &userRepo,
-		},
-	})
+	route.SetRoutes(
+		app,
+		controller.Controller{
+			GetFilesService: service.GetFilesService{
+				Conn:     conn,
+				FileRepo: &fileRepo,
+			},
+			GetFileService: service.GetFileService{
+				Conn:     conn,
+				FileRepo: &fileRepo,
+			},
+			SearchFilesService: service.SearchFilesService{
+				Conn:        conn,
+				FileRepo:    &fileRepo,
+				ChatGPTRepo: &chatGPTRepo,
+			},
+			RegistrationDirectoryService: service.RegistrationDirectoryService{
+				Conn:        conn,
+				UserRepo:    &userRepo,
+				FileRepo:    &fileRepo,
+				ChatGPTRepo: &chatGPTRepo,
+			},
+			RegistrationFileService: service.RegistrationFileService{
+				Conn:        conn,
+				UserRepo:    &userRepo,
+				FileRepo:    &fileRepo,
+				ChatGPTRepo: &chatGPTRepo,
+			},
+			RenameFileService: service.RenameFileService{
+				Conn:     conn,
+				FileRepo: &fileRepo,
+			},
+			MoveFileService: service.MoveFileService{
+				Conn:     conn,
+				FileRepo: &fileRepo,
+			},
+			DeleteFileService: service.DeleteFileService{
+				Conn:     conn,
+				FileRepo: &fileRepo,
+			},
 
-	route.SetRoutes(app, controller.Controller{
-		GetFilesService: service.GetFilesService{
-			Conn:     conn,
-			FileRepo: &fileRepo,
+			GetLoggedInUserService: service.GetLoggedInUserService{
+				Conn:     conn,
+				UserRepo: &userRepo,
+			},
+			LoginService: service.LoginService{
+				Conn:     conn,
+				UserRepo: &userRepo,
+			},
+			RegistrationUserService: service.RegistrationUserService{
+				Conn:     conn,
+				UserRepo: &userRepo,
+			},
+			LogoutService: service.LogoutService{
+				Conn:     conn,
+				UserRepo: &userRepo,
+			},
+			GenerateTokenService: service.GenerateTokenService{
+				Conn:     conn,
+				UserRepo: &userRepo,
+			},
 		},
-		GetFileService: service.GetFileService{
-			Conn:     conn,
-			FileRepo: &fileRepo,
+		api.Api{
+			GetUserByTokenService: service.GetUserByTokenService{
+				Conn:     conn,
+				UserRepo: &userRepo,
+			},
+			RegistrationFileService: service.RegistrationFileService{
+				Conn:        conn,
+				UserRepo:    &userRepo,
+				FileRepo:    &fileRepo,
+				ChatGPTRepo: &chatGPTRepo,
+			},
 		},
-		SearchFilesService: service.SearchFilesService{
-			Conn:        conn,
-			FileRepo:    &fileRepo,
-			ChatGPTRepo: &chatGPTRepo,
+		ws.WsController{
+			UploadFileChunkService: service.UploadFileChunkService{
+				FileRepo: &fileRepo,
+			},
+			GetLoggedInUserService: service.GetLoggedInUserService{
+				Conn:     conn,
+				UserRepo: &userRepo,
+			},
 		},
-		RegistrationDirectoryService: service.RegistrationDirectoryService{
-			Conn:        conn,
-			UserRepo:    &userRepo,
-			FileRepo:    &fileRepo,
-			ChatGPTRepo: &chatGPTRepo,
+		middleware.Middleware{
+			GetLoggedInUserService: service.GetLoggedInUserService{
+				Conn:     conn,
+				UserRepo: &userRepo,
+			},
+			GetUserByTokenService: service.GetUserByTokenService{
+				Conn:     conn,
+				UserRepo: &userRepo,
+			},
 		},
-		RegistrationFileService: service.RegistrationFileService{
-			Conn:        conn,
-			UserRepo:    &userRepo,
-			FileRepo:    &fileRepo,
-			ChatGPTRepo: &chatGPTRepo,
-		},
-		RenameFileService: service.RenameFileService{
-			Conn:     conn,
-			FileRepo: &fileRepo,
-		},
-		MoveFileService: service.MoveFileService{
-			Conn:     conn,
-			FileRepo: &fileRepo,
-		},
-		DeleteFileService: service.DeleteFileService{
-			Conn:     conn,
-			FileRepo: &fileRepo,
-		},
+	)
 
-		GetLoggedInUserService: service.GetLoggedInUserService{
-			Conn:     conn,
-			UserRepo: &userRepo,
-		},
-		LoginService: service.LoginService{
-			Conn:     conn,
-			UserRepo: &userRepo,
-		},
-		RegistrationUserService: service.RegistrationUserService{
-			Conn:     conn,
-			UserRepo: &userRepo,
-		},
-		LogoutService: service.LogoutService{
-			Conn:     conn,
-			UserRepo: &userRepo,
-		},
-	}, middleware.Middleware{
-		GetLoggedInUserService: service.GetLoggedInUserService{
-			Conn:     conn,
-			UserRepo: &userRepo,
-		},
-	})
+	app.Static("/files", "./storage/files")
 
-	go grpcServer.Listen(":9000")
-	go app.Listen(":8000")
-
-	select {}
+	app.Listen(":8000")
 }

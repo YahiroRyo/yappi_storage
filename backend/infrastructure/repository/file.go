@@ -13,8 +13,8 @@ import (
 )
 
 type FileRepositoryInterface interface {
-	GetFiles(db *sqlx.DB, user user.User, parentDirectoryId *int64, currentPageCount int, pageSize int) (*file.Files, error)
-	GetFileByID(db *sqlx.DB, user user.User, id int64) (*file.File, error)
+	GetFiles(db *sqlx.DB, user user.User, parentDirectoryId *string, currentPageCount int, pageSize int) (*file.Files, error)
+	GetFileByID(db *sqlx.DB, user user.User, id string) (*file.File, error)
 	SearchFiles(
 		db *sqlx.DB,
 		user user.User,
@@ -25,29 +25,29 @@ type FileRepositoryInterface interface {
 	RegistrationFile(tx *sqlx.Tx, user user.User, file file.File) (*file.File, error)
 	UploadFileChunk(file []byte, filename string) (*string, error)
 	UpdateFile(tx *sqlx.Tx, user user.User, file file.File) (*file.File, error)
-	DeleteFile(tx *sqlx.Tx, user user.User, id int64) error
+	DeleteFile(tx *sqlx.Tx, user user.User, id string) error
 }
 
 type FileRepository struct {
 }
 
-func (repo *FileRepository) GetFiles(db *sqlx.DB, user user.User, parentDirectoryId *int64, currentPageCount int, pageSize int) (*file.Files, error) {
+func (repo *FileRepository) GetFiles(db *sqlx.DB, user user.User, parentDirectoryId *string, currentPageCount int, pageSize int) (*file.Files, error) {
 	args := map[string]interface{}{
 		"user_id":  user.ID,
 		"pageSize": pageSize,
 		"offset":   pageSize * currentPageCount,
 	}
 
-	q := `SELECT id, user_id, parent_directory_id, embedding, kind, created_at, updated_at FROM files WHERE user_id = :user_id `
+	q := `SELECT * FROM files WHERE user_id = :user_id `
 
-	if parentDirectoryId == nil {
-		q += `AND parent_directory_id = NULL `
+	if *parentDirectoryId == "" {
+		q += `AND parent_directory_id IS NULL `
 	} else {
 		q += `AND parent_directory_id = :parent_directory_id `
 		args["parent_directory_id"] = parentDirectoryId
 	}
 
-	q += `LIMIT :pageSize OFFSET :offset `
+	q += `LIMIT :pageSize OFFSET :offset`
 
 	rows, err := db.NamedQuery(q, args)
 	if err != nil {
@@ -58,7 +58,9 @@ func (repo *FileRepository) GetFiles(db *sqlx.DB, user user.User, parentDirector
 
 	for rows.Next() {
 		var f database.File
-		rows.Scan(&f)
+		if err := rows.StructScan(&f); err != nil {
+			return nil, errors.Join(FieldSQLError{Code: 500, Message: "スキャンエラー"}, err)
+		}
 		e := f.ToEntity()
 
 		files = append(files, e)
@@ -67,16 +69,22 @@ func (repo *FileRepository) GetFiles(db *sqlx.DB, user user.User, parentDirector
 	return &files, nil
 }
 
-func (repo *FileRepository) GetFileByID(db *sqlx.DB, user user.User, id int64) (*file.File, error) {
-	row := db.QueryRow("SELECT * FROM files WHERE user_id = $1 AND id = $2", user.ID, id)
+func (repo *FileRepository) GetFileByID(db *sqlx.DB, user user.User, id string) (*file.File, error) {
+	args := map[string]interface{}{
+		"user_id": user.ID,
+		"id":      id,
+	}
 
-	if row == nil {
-		return nil, NotFoundError{Code: 404, Message: "ファイルが存在しません。"}
+	rows, err := db.NamedQuery("SELECT * FROM files WHERE user_id = :user_id AND id = :id", args)
+	if err != nil {
+		return nil, errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err)
 	}
 
 	var file database.File
-	if err := row.Scan(&file); err != nil {
-		return nil, errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err)
+	for rows.Next() {
+		if err := rows.StructScan(&file); err != nil {
+			return nil, errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err)
+		}
 	}
 
 	e := file.ToEntity()
@@ -170,26 +178,30 @@ func (repo *FileRepository) RegistrationFile(tx *sqlx.Tx, user user.User, file f
 }
 
 func (repo *FileRepository) UpdateFile(tx *sqlx.Tx, user user.User, file file.File) (*file.File, error) {
-	_, err := tx.Exec(`
+	args := map[string]any{
+		"parent_directory_id": file.ParentDirectoryID,
+		"embedding":           file.Embedding,
+		"kind":                file.Kind,
+		"url":                 file.Url,
+		"name":                file.Name,
+		"id":                  file.ID,
+		"user_id":             user.ID,
+	}
+
+	_, err := tx.NamedExec(`
 		UPDATE files
 		SET
-			parent_directory_id = $1,
-			embedding = $2,
-			kind = $3,
-			url = $4,
-			name = $5
+			parent_directory_id = :parent_directory_id,
+			embedding = :embedding,
+			kind = :kind,
+			url = :url,
+			name = :name
 		WHERE
-			id = $6
+			id = :id
 		AND
-			user_id = $7
+			user_id = :user_id
 		`,
-		file.ParentDirectoryID,
-		file.Embedding,
-		file.Kind,
-		file.Url,
-		file.Name,
-		file.ID,
-		user.ID,
+		args,
 	)
 
 	if err != nil {
@@ -200,7 +212,7 @@ func (repo *FileRepository) UpdateFile(tx *sqlx.Tx, user user.User, file file.Fi
 }
 
 func (repo *FileRepository) UploadFileChunk(file []byte, filename string) (*string, error) {
-	f, err := os.OpenFile(fmt.Sprintf("../../storage/files/%s", filename), os.O_CREATE|os.O_RDWR|os.O_APPEND, 0666)
+	f, err := os.OpenFile(fmt.Sprintf("storage/files/%s", filename), os.O_CREATE|os.O_RDWR|os.O_APPEND, 0666)
 	if err != nil {
 		return nil, err
 	}
@@ -216,7 +228,7 @@ func (repo *FileRepository) UploadFileChunk(file []byte, filename string) (*stri
 	return &url, nil
 }
 
-func (repo *FileRepository) DeleteFile(tx *sqlx.Tx, user user.User, id int64) error {
+func (repo *FileRepository) DeleteFile(tx *sqlx.Tx, user user.User, id string) error {
 	_, err := tx.Exec(`
 		DELETE FROM files
 		WHERE

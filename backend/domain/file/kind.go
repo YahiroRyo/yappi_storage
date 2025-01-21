@@ -3,7 +3,7 @@ package file
 type FileKind int
 
 const (
-	Unknown = iota
+	Unknown FileKind = iota
 	Directory
 	Word
 	Excel

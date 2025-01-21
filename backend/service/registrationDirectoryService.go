@@ -1,7 +1,6 @@
 package service
 
 import (
-	"strconv"
 	"time"
 
 	"github.com/YahiroRyo/yappi_storage/backend/domain/file"
@@ -18,7 +17,7 @@ type RegistrationDirectoryService struct {
 	ChatGPTRepo repository.ChatGPTRepositoryInterface
 }
 
-func (service *RegistrationDirectoryService) Execute(user user.User, name string, parentDirectoryID *int64) (*file.File, error) {
+func (service *RegistrationDirectoryService) Execute(user user.User, name string, parentDirectoryID *string) (*file.File, error) {
 	tx, err := service.Conn.Beginx()
 	if err != nil {
 		return nil, err
@@ -30,19 +29,13 @@ func (service *RegistrationDirectoryService) Execute(user user.User, name string
 		return nil, err
 	}
 
-	id, err := strconv.ParseInt(*generatedID, 10, 64)
-	if err != nil {
-		tx.Rollback()
-		return nil, err
-	}
-
 	file := file.File{
-		ID:                id,
+		ID:                *generatedID,
 		UserID:            user.ID,
 		ParentDirectoryID: parentDirectoryID,
 		Url:               nil,
 		Embedding:         nil,
-		Kind:              file.Unknown,
+		Kind:              file.Directory.ToEnString(),
 		Name:              name,
 		CreatedAt:         time.Now(),
 		UpdatedAt:         time.Now(),

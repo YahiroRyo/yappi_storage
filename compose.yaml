@@ -6,14 +6,13 @@ services:
     working_dir: /home/frontend
     volumes:
       - ./frontend:/home/frontend
-      - ./proto:/home/frontend/proto
     ports:
       - 127.0.0.1:3000:3000
     depends_on:
       - backend
     tty: true
     networks:
-      - db
+      - storage
 
   storybook:
     build:
@@ -33,7 +32,6 @@ services:
       dockerfile: ./docker/backend.Dockerfile
     volumes:
       - ./backend:/go/src/github.com/YahiroRyo/yappi_storage/backend
-      - ./proto:/go/src/github.com/YahiroRyo/yappi_storage/backend/proto
     tty: true
     ports:
       - 127.0.0.1:8000:8000
@@ -42,7 +40,7 @@ services:
       - postgres
       - postgres.test
     networks:
-      - db
+      - storage
 
   postgres:
     build: 
@@ -60,7 +58,7 @@ services:
       TZ: "Asia/Tokyo"
       LC_ALL: "C.UTF-8"
     networks:
-      - db
+      - storage
 
   postgres.test:
     build: 
@@ -78,8 +76,8 @@ services:
       TZ: "Asia/Tokyo"
       LC_ALL: "C.UTF-8"
     networks:
-      - db
+      - storage
 
 networks:
-  db:
+  storage:
     driver: bridge

@@ -12,7 +12,7 @@ type RenameFileService struct {
 	FileRepo repository.FileRepositoryInterface
 }
 
-func (service *RenameFileService) Execute(user user.User, fileId int64, name string) (*file.File, error) {
+func (service *RenameFileService) Execute(user user.User, fileId string, name string) (*file.File, error) {
 	tx, err := service.Conn.Beginx()
 	if err != nil {
 		return nil, err
@@ -20,10 +20,11 @@ func (service *RenameFileService) Execute(user user.User, fileId int64, name str
 
 	f, err := service.FileRepo.GetFileByID(service.Conn, user, fileId)
 	if err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 
-	movedDirectoryFile := file.File{
+	renameFile := file.File{
 		ID:                f.ID,
 		UserID:            f.UserID,
 		ParentDirectoryID: f.ParentDirectoryID,
@@ -35,5 +36,13 @@ func (service *RenameFileService) Execute(user user.User, fileId int64, name str
 		UpdatedAt:         f.UpdatedAt,
 	}
 
-	return service.FileRepo.UpdateFile(tx, user, movedDirectoryFile)
+	file, err := service.FileRepo.UpdateFile(tx, user, renameFile)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	tx.Commit()
+
+	return file, nil
 }

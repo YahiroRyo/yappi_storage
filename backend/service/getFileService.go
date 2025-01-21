@@ -13,6 +13,6 @@ type GetFileService struct {
 	FileRepo repository.FileRepositoryInterface
 }
 
-func (service *GetFileService) Execute(user user.User, id int64) (*file.File, error) {
+func (service *GetFileService) Execute(user user.User, id string) (*file.File, error) {
 	return service.FileRepo.GetFileByID(service.Conn, user, id)
 }

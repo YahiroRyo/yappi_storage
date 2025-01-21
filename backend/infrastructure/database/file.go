@@ -8,9 +8,9 @@ import (
 )
 
 type File struct {
-	ID                int64     `db:"id"`
-	UserID            int64     `db:"user_id"`
-	ParentDirectoryID *int64    `db:"parent_directory_id"`
+	ID                string    `db:"id"`
+	UserID            string    `db:"user_id"`
+	ParentDirectoryID *string   `db:"parent_directory_id"`
 	Embedding         *Vector   `db:"embedding"`
 	Kind              string    `db:"kind"`
 	Url               *string   `db:"url"`
@@ -25,7 +25,9 @@ func (f *File) ToEntity() file.File {
 		UserID:            f.UserID,
 		ParentDirectoryID: f.ParentDirectoryID,
 		Embedding:         (*vector.Vector)(f.Embedding),
-		Kind:              file.FileKindFromEnString(f.Kind),
+		Kind:              f.Kind,
+		Name:              f.Name,
+		Url:               f.Url,
 		CreatedAt:         f.CreatedAt,
 		UpdatedAt:         f.UpdatedAt,
 	}

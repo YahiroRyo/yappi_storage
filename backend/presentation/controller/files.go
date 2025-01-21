@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"github.com/YahiroRyo/yappi_storage/backend/domain/file"
 	"github.com/YahiroRyo/yappi_storage/backend/helper/validate"
 	"github.com/YahiroRyo/yappi_storage/backend/presentation/request"
 	"github.com/YahiroRyo/yappi_storage/backend/presentation/response"
@@ -58,6 +59,36 @@ func (controller *Controller) GetFiles(ctx *fiber.Ctx) error {
 	return nil
 }
 
+func (controller *Controller) GetFile(ctx *fiber.Ctx) error {
+	req := request.GetFileRequest{}
+
+	if err := ctx.ParamsParser(&req); err != nil {
+		return err
+	}
+	println(req.FileId)
+
+	if err := validate.Validate(&req); err != nil {
+		return err
+	}
+
+	sess, err := session.GetSession(ctx)
+	if err != nil {
+		return err
+	}
+
+	user, err := controller.GetLoggedInUserService.Execute(sess)
+	if err != nil {
+		return err
+	}
+
+	file, err := controller.GetFileService.Execute(*user, req.FileId)
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(file)
+}
+
 func (controller *Controller) RegistrationDirectory(ctx *fiber.Ctx) error {
 	req := request.RegistrationDirectoryRequest{}
 
@@ -108,7 +139,7 @@ func (controller *Controller) RegistrationFile(ctx *fiber.Ctx) error {
 		return err
 	}
 
-	file, err := controller.RegistrationFileService.Execute(*user, req.Url, req.ParentDirectoryId)
+	file, err := controller.RegistrationFileService.Execute(*user, req.Url, file.FileKindFromEnString(req.Kind), req.Name, req.ParentDirectoryId)
 	if err != nil {
 		return err
 	}

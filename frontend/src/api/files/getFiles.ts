@@ -20,7 +20,7 @@ export const getFiles = async (
   page_size: number,
   current_page_count: number,
   query?: string,
-  parent_directory_id?: number
+  parent_directory_id?: string
 ): Promise<Response> => {
   const params = {
     page_size: page_size.toString(),

@@ -1,3 +1,4 @@
+import { getAllCookies } from "@/helpers/getAllCookies";
 import { User } from "@/types/user";
 
 type SuccessedResponse = User;
@@ -13,10 +14,21 @@ export type Response = {
 };
 
 export const getLoggedInUser = async (): Promise<Response> => {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users`, {
+  const requestInit: RequestInit = {
     mode: "same-origin",
     credentials: "include",
-  });
+  };
+
+  if (typeof window === "undefined") {
+    requestInit["headers"] = {
+      Cookie: await getAllCookies(),
+    };
+  }
+
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/users`,
+    requestInit
+  );
 
   const json = await res.json();
 
