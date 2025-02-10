@@ -1,10 +1,8 @@
 import { useWsClient } from "@/api/files/client";
-import { createDirectory } from "@/api/files/createDirectory";
 import { registrationFile } from "@/api/files/registrationFile";
 import { uploadFile } from "@/api/files/uploadFile";
 import { Button } from "@/components/ui/button";
 import { GridVerticalRow } from "@/components/ui/grid/gridVerticalRow";
-import { Input } from "@/components/ui/input";
 import { Loading } from "@/components/ui/loading";
 import { Modal } from "@/components/ui/modal";
 import { Text } from "@/components/ui/text";

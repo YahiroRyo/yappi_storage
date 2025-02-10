@@ -1,4 +1,3 @@
-import { createDirectory } from "@/api/files/createDirectory";
 import { renameFile } from "@/api/files/renameFile";
 import { Button } from "@/components/ui/button";
 import { GridVerticalRow } from "@/components/ui/grid/gridVerticalRow";
