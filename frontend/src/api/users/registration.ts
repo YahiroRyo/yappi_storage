@@ -3,6 +3,7 @@ import { User } from "@/types/user";
 type SuccessedResponse = User;
 
 type FailedResponse = {
+  errors: Array<string>;
   message: string;
 };
 

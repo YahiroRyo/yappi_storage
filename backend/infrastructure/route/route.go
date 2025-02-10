@@ -35,7 +35,7 @@ func SetRoutes(app *fiber.App, controller controller.Controller, api api.Api, ws
 	}
 
 	ws := app.Group("/ws")
-	ws.Use(middleware.AuthenticateLoggedInUserMiddleware).Get("/ws/uploadfile", websocket.New(wsController.UploadFile))
+	ws.Use(middleware.AuthenticateLoggedInUserMiddleware).Get("/uploadfile", websocket.New(wsController.UploadFile))
 
 	v1 := app.Group("/v1").Use(middleware.AuthenticateLoggedInUserMiddlewareByToken)
 	{

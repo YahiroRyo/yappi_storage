@@ -13,6 +13,7 @@ type Props<T extends RowData> = {
   headers: Record<Extract<keyof T, string>, string>;
   hiddenHeaders?: Array<Extract<keyof T, string>>;
   data: T[];
+  showColumn?: (row: T, key: string) => any;
   rowHeight?: string;
   onSelected?: (datum: T) => void;
   href?: (datum: T) => string;
@@ -24,6 +25,7 @@ export const SelectableTable = <T extends RowData>({
   headers,
   hiddenHeaders,
   data,
+  showColumn,
   rowHeight = "48px",
   onSelected,
   href,
@@ -97,6 +99,7 @@ export const SelectableTable = <T extends RowData>({
               ))}
           </tr>
         </thead>
+
         <tbody>
           {data.map((row, rowIndex) => (
             <tr
@@ -177,11 +180,16 @@ export const SelectableTable = <T extends RowData>({
                       hiddenHeaders?.includes(key as Extract<keyof T, string>)
                     )
                 )
-                .map((key, index) => (
-                  <td className={styles.table__td} key={`${rowIndex}.${index}`}>
-                    {row[key]}
-                  </td>
-                ))}
+                .map((key, index) => {
+                  return (
+                    <td
+                      className={styles.table__td}
+                      key={`${rowIndex}.${index}`}
+                    >
+                      {showColumn ? showColumn(row, key) : row[key]}
+                    </td>
+                  );
+                })}
             </tr>
           ))}
         </tbody>
