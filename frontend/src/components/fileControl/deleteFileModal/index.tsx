@@ -2,12 +2,11 @@ import { deleteFile } from "@/api/files/deleteFile";
 import { Button } from "@/components/ui/button";
 import { GridHorizonRow } from "@/components/ui/grid/gridHorizonRow";
 import { GridVerticalRow } from "@/components/ui/grid/gridVerticalRow";
-import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { Text } from "@/components/ui/text";
 import { uiConfig } from "@/components/ui/uiConfig";
 import { File } from "@/types/file";
-import { FormEventHandler, useState } from "react";
+import { useState } from "react";
 
 type Props = {
   isOpended: boolean;

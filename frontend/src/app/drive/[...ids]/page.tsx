@@ -46,7 +46,7 @@ export default function Directory() {
   const [isOpendedDeleteFileModal, setIsOpendedDeleteFileModal] =
     useState(false);
   const [selectingFile, setSelectingFile] = useState<File>();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading] = useState(false);
 
   const processedParentDirectoryId = useMemo(() => {
     let parentDirectoryIdForFetch: string | undefined = undefined;

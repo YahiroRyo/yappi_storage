@@ -1,4 +1,4 @@
-import { File, FileKind } from "@/types/file";
+import { File, } from "@/types/file";
 
 export type SuccessedResponse = File;
 
