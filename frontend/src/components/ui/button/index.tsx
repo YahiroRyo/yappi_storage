@@ -19,6 +19,7 @@ type Props = {
   };
   type?: "submit" | "button";
   textAlign?: "center" | "left" | "right";
+  justifyContent?: "center" | "flex-start" | "flex-end";
   padding?: string;
   radius?: string;
   border?: string;
@@ -36,6 +37,7 @@ export const Button = ({
   padding,
   radius,
   textAlign,
+  justifyContent,
   border,
   disabled,
   type,
@@ -92,6 +94,11 @@ export const Button = ({
 
   if (textAlign) {
     style.textAlign = textAlign;
+  }
+
+  if (justifyContent) {
+    style.display = "flex";
+    style.justifyContent = justifyContent;
   }
 
   if (radius) {

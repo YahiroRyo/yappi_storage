@@ -9,6 +9,8 @@ import { Text } from "@/components/ui/text";
 import { uiConfig } from "@/components/ui/uiConfig";
 import { fileToFileKind } from "@/helpers/fileToFileKind";
 import { FormEventHandler, useState } from "react";
+import { UploadFileButton } from "../uploadFileButton";
+import { X } from "lucide-react";
 
 type Props = {
   parentDirectoryId?: string;
@@ -47,18 +49,17 @@ export const UploadFileModal = ({
     setUploadProgress(0);
 
     try {
-      // すべてのファイルをアップロード
       const urls = await uploadFiles(wsClient, uploadFileFormData.files);
       
-      // ファイルの登録情報を作成
       const registrationFilesData = uploadFileFormData.files.map((file, index) => ({
-        url: urls[index],
         name: file.name,
+        size: file.size,
+        type: file.type,
+        url: urls[index],
         kind: fileToFileKind(file),
-        parent_directory_id: parentDirectoryId
+        parent_directory_id: parentDirectoryId,
       }));
 
-      // すべてのファイルを登録
       const res = await registrationFiles(registrationFilesData);
       
       setIsLoading(false);
@@ -79,11 +80,10 @@ export const UploadFileModal = ({
     }
   };
 
-  // 選択したファイルの削除
-  const removeFile = (index: number) => {
+  const handleFileSelect = (files: FileList) => {
     setUploadFileFormData((prev) => ({
       ...prev,
-      files: prev.files.filter((_, i) => i !== index)
+      files: Array.from(files),
     }));
   };
 
@@ -96,53 +96,74 @@ export const UploadFileModal = ({
           </Text>
           <form onSubmit={onUploadFile}>
             <GridVerticalRow gap="1rem">
-              <input
-                type="file"
-                multiple
-                onChange={(e) => {
-                  const fileList = e.currentTarget.files;
-
-                  if (!fileList || fileList?.length === 0) {
-                    return;
-                  }
-
-                  const filesArray = Array.from(fileList);
-
-                  setUploadFileFormData((value) => ({
-                    ...value,
-                    files: [...value.files, ...filesArray],
-                  }));
-                }}
-              />
+              <UploadFileButton onFileSelect={handleFileSelect} />
               
               {uploadFileFormData.files.length > 0 && (
                 <div style={{ maxHeight: "200px", overflow: "auto", margin: "1rem 0" }}>
                   <Text size="small" fontWeight={600}>選択されたファイル ({uploadFileFormData.files.length}件):</Text>
-                  <ul style={{ listStyle: "none", padding: 0 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                     {uploadFileFormData.files.map((file, index) => (
-                      <li key={index} style={{ 
-                        display: "flex", 
-                        justifyContent: "space-between", 
-                        alignItems: "center",
-                        padding: "0.5rem",
-                        borderBottom: `1px solid ${uiConfig.color.surface.high}`
-                      }}>
-                        <Text size="small">
-                          {file.name} ({(file.size / 1024).toFixed(2)} KB)
-                        </Text>
-                        <Button
-                          padding="0.25rem 0.5rem"
-                          color={{
-                            backgroundColor: uiConfig.color.on.secondary.main,
-                            textColor: uiConfig.color.text.high,
+                      <div
+                        key={index}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "0.5rem",
+                          background: "#f9fafb",
+                          borderRadius: "0.5rem",
+                          minHeight: "2.5rem",
+                          gap: "0.5rem"
+                        }}
+                      >
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            fontSize: "0.9rem"
+                          }}>
+                            <Text size="small">{file.name}</Text>
+                          </div>
+                          <Text size="small" color="gray" className="file-size-text">
+                            {(file.size / 1024 / 1024).toFixed(2)} MB
+                          </Text>
+                        </div>
+                        <div
+                          style={{
+                            width: "2rem",
+                            height: "2rem",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            background: "#e5e7eb",
+                            borderRadius: "50%",
+                            minWidth: "2rem",
+                            minHeight: "2rem"
                           }}
-                          onClick={() => removeFile(index)}
                         >
-                          <Text size="small">削除</Text>
-                        </Button>
-                      </li>
+                          <Button
+                            type="button"
+                            color={{
+                              backgroundColor: "transparent",
+                              textColor: "#333",
+                            }}
+                            radius="50%"
+                            padding="0"
+                            justifyContent="center"
+                            onClick={() => {
+                              setUploadFileFormData((prev) => ({
+                                ...prev,
+                                files: prev.files.filter((_, i) => i !== index),
+                              }));
+                            }}
+                          >
+                            <X style={{ width: "1rem", height: "1rem" }} />
+                          </Button>
+                        </div>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               )}
               
