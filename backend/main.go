@@ -15,6 +15,7 @@ import (
 	"github.com/YahiroRyo/yappi_storage/backend/presentation/middleware"
 	"github.com/YahiroRyo/yappi_storage/backend/presentation/ws"
 	"github.com/YahiroRyo/yappi_storage/backend/service"
+	"github.com/go-redis/cache/v9"
 	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -22,6 +23,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/requestid"
 	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
+	"github.com/redis/go-redis/v9"
 )
 
 func diController(conn *sqlx.DB, userRepo repository.UserRepository, fileRepo repository.FileRepository, chatGPTRepo repository.ChatGPTRepository) controller.Controller {
@@ -134,8 +136,19 @@ func diWs(conn *sqlx.DB, userRepo repository.UserRepository, fileRepo repository
 }
 
 func main() {
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:     "redis:6379",
+		Password: "",
+		DB:       0,
+	})
+
 	userRepo := repository.UserRepository{}
-	fileRepo := repository.FileRepository{}
+	fileRepo := repository.FileRepository{
+		Redis: redisClient,
+		Cache: cache.New(&cache.Options{
+			Redis: redisClient,
+		}),
+	}
 	chatGPTRepo := repository.ChatGPTRepository{}
 
 	app := fiber.New(fiber.Config{

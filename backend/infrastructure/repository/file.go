@@ -7,13 +7,16 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/YahiroRyo/yappi_storage/backend/domain/file"
 	"github.com/YahiroRyo/yappi_storage/backend/domain/user"
 	"github.com/YahiroRyo/yappi_storage/backend/domain/vector"
 	"github.com/YahiroRyo/yappi_storage/backend/infrastructure/database"
+	"github.com/go-redis/cache/v9"
 	yaml "github.com/goccy/go-yaml"
 	"github.com/jmoiron/sqlx"
+	"github.com/redis/go-redis/v9"
 )
 
 type FileRepositoryInterface interface {
@@ -35,6 +38,8 @@ type FileRepositoryInterface interface {
 }
 
 type FileRepository struct {
+	Redis *redis.Client
+	Cache *cache.Cache
 }
 
 var storePaths []string
@@ -75,38 +80,53 @@ func init() {
 }
 
 func (repo *FileRepository) GetFiles(db *sqlx.DB, user user.User, parentDirectoryId *string, currentPageCount int, pageSize int) (*file.Files, error) {
-	args := map[string]interface{}{
-		"user_id":  user.ID,
-		"pageSize": pageSize,
-		"offset":   pageSize * currentPageCount,
-	}
+	var files file.Files
 
-	q := `SELECT * FROM files WHERE user_id = :user_id `
+	err := repo.Cache.Once(&cache.Item{
+		Key:   fmt.Sprintf("files:%s:%s:%d:%d", user.ID, *parentDirectoryId, currentPageCount, pageSize),
+		TTL:   time.Minute,
+		Value: &files,
+		Do: func(c *cache.Item) (interface{}, error) {
+			args := map[string]interface{}{
+				"user_id":  user.ID,
+				"pageSize": pageSize,
+				"offset":   pageSize * currentPageCount,
+			}
 
-	if *parentDirectoryId == "" {
-		q += `AND parent_directory_id IS NULL `
-	} else {
-		q += `AND parent_directory_id = :parent_directory_id `
-		args["parent_directory_id"] = parentDirectoryId
-	}
+			q := `SELECT * FROM files WHERE user_id = :user_id `
 
-	q += `LIMIT :pageSize OFFSET :offset`
+			if *parentDirectoryId == "" {
+				q += `AND parent_directory_id IS NULL `
+			} else {
+				q += `AND parent_directory_id = :parent_directory_id `
+				args["parent_directory_id"] = parentDirectoryId
+			}
 
-	rows, err := db.NamedQuery(q, args)
+			q += `LIMIT :pageSize OFFSET :offset`
+
+			rows, err := db.NamedQuery(q, args)
+			if err != nil {
+				return nil, errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err)
+			}
+
+			files := make(file.Files, 0)
+
+			for rows.Next() {
+				var f database.File
+				if err := rows.StructScan(&f); err != nil {
+					return nil, errors.Join(FieldSQLError{Code: 500, Message: "スキャンエラー"}, err)
+				}
+				e := f.ToEntity()
+
+				files = append(files, e)
+			}
+
+			return &files, nil
+		},
+	})
+
 	if err != nil {
-		return nil, errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err)
-	}
-
-	files := make(file.Files, 0)
-
-	for rows.Next() {
-		var f database.File
-		if err := rows.StructScan(&f); err != nil {
-			return nil, errors.Join(FieldSQLError{Code: 500, Message: "スキャンエラー"}, err)
-		}
-		e := f.ToEntity()
-
-		files = append(files, e)
+		return nil, err
 	}
 
 	return &files, nil
@@ -118,21 +138,34 @@ func (repo *FileRepository) GetFileByID(db *sqlx.DB, user user.User, id string) 
 		"id":      id,
 	}
 
-	rows, err := db.NamedQuery("SELECT * FROM files WHERE user_id = :user_id AND id = :id", args)
+	var f file.File
+
+	err := repo.Cache.Once(&cache.Item{
+		Key:   fmt.Sprintf("file:%s:%s", user.ID, id),
+		TTL:   1 * time.Minute,
+		Value: &f,
+		Do: func(c *cache.Item) (interface{}, error) {
+			rows, err := db.NamedQuery("SELECT * FROM files WHERE user_id = :user_id AND id = :id", args)
+			if err != nil {
+				return nil, errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err)
+			}
+
+			var file database.File
+			for rows.Next() {
+				if err := rows.StructScan(&file); err != nil {
+					return nil, errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err)
+				}
+			}
+
+			return file.ToEntity(), nil
+		},
+	})
+
 	if err != nil {
 		return nil, errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err)
 	}
 
-	var file database.File
-	for rows.Next() {
-		if err := rows.StructScan(&file); err != nil {
-			return nil, errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err)
-		}
-	}
-
-	e := file.ToEntity()
-
-	return &e, nil
+	return &f, nil
 }
 
 func (repo *FileRepository) SearchFiles(

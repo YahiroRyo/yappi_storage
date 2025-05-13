@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"sync"
 
 	"github.com/YahiroRyo/yappi_storage/backend/domain/file"
 	"github.com/YahiroRyo/yappi_storage/backend/domain/user"
@@ -22,38 +23,50 @@ func (service *MoveFilesService) Execute(user user.User, fileIds []string, after
 
 	files := []file.File{}
 
+	var result error
+	var wg sync.WaitGroup
 	for _, fileId := range fileIds {
-		f, err := service.FileRepo.GetFileByID(service.Conn, user, fileId)
-		if err != nil {
-			tx.Rollback()
-			return nil, err
-		}
+		wg.Add(1)
+		go func(fileId string) {
+			f, err := service.FileRepo.GetFileByID(service.Conn, user, fileId)
+			if err != nil {
+				result = errors.Join(result, err)
+				return
+			}
 
-		if f.ParentDirectoryID != nil && *f.ParentDirectoryID == afterParentDirectoryId {
-			return nil, errors.New("ファイルはすでに指定のディレクトリにあります")
-		}
+			if f.ParentDirectoryID != nil && *f.ParentDirectoryID == afterParentDirectoryId {
+				result = errors.Join(result, errors.New("ファイルはすでに指定のディレクトリにあります"))
+				return
+			}
 
-		movedDirectoryFile := file.File{
-			ID:                f.ID,
-			UserID:            f.UserID,
-			ParentDirectoryID: &afterParentDirectoryId,
-			Embedding:         f.Embedding,
-			Kind:              f.Kind,
-			Url:               f.Url,
-			Name:              f.Name,
-			CreatedAt:         f.CreatedAt,
-			UpdatedAt:         f.UpdatedAt,
-		}
+			movedDirectoryFile := file.File{
+				ID:                f.ID,
+				UserID:            f.UserID,
+				ParentDirectoryID: &afterParentDirectoryId,
+				Embedding:         f.Embedding,
+				Kind:              f.Kind,
+				Url:               f.Url,
+				Name:              f.Name,
+				CreatedAt:         f.CreatedAt,
+				UpdatedAt:         f.UpdatedAt,
+			}
 
-		file, err := service.FileRepo.UpdateFile(tx, user, movedDirectoryFile)
-		if err != nil {
-			tx.Rollback()
-			return nil, err
-		}
+			file, err := service.FileRepo.UpdateFile(tx, user, movedDirectoryFile)
+			if err != nil {
+				result = errors.Join(result, err)
+				return
+			}
 
-		files = append(files, *file)
+			files = append(files, *file)
+		}(fileId)
 	}
 
-	tx.Commit()
+	wg.Wait()
+
+	if result != nil {
+		tx.Rollback()
+		return nil, result
+	}
+
 	return files, nil
 }

@@ -1,6 +1,9 @@
 package service
 
 import (
+	"errors"
+	"sync"
+
 	"github.com/YahiroRyo/yappi_storage/backend/domain/user"
 	"github.com/YahiroRyo/yappi_storage/backend/infrastructure/repository"
 	"github.com/jmoiron/sqlx"
@@ -17,12 +20,24 @@ func (service *DeleteFilesService) Execute(user user.User, fileIds []string) err
 		return err
 	}
 
+	var result error
+	var wg sync.WaitGroup
 	for _, fileId := range fileIds {
-		err = service.FileRepo.DeleteFile(tx, user, fileId)
-		if err != nil {
-			tx.Rollback()
-			return err
-		}
+		wg.Add(1)
+		go func(fileId string) {
+			defer wg.Done()
+			err := service.FileRepo.DeleteFile(tx, user, fileId)
+			if err != nil {
+				result = errors.Join(result, err)
+			}
+		}(fileId)
+	}
+
+	wg.Wait()
+
+	if result != nil {
+		tx.Rollback()
+		return result
 	}
 
 	tx.Commit()

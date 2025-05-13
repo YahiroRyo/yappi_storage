@@ -13,31 +13,6 @@ services:
     tty: true
     networks:
       - storage
-
-  mobile:
-    build:
-      context: .
-      dockerfile: ./docker/mobile.Dockerfile
-    working_dir: /home/mobile
-    volumes:
-      - ./mobile:/home/mobile
-    depends_on:
-      - backend
-    tty: true
-    networks:
-      - storage
-
-  storybook:
-    build:
-      context: .
-      dockerfile: ./docker/frontend.Dockerfile
-    working_dir: /home/frontend
-    volumes:
-      - ./frontend:/home/frontend
-    ports:
-      - 127.0.0.1:6006:6006
-    command: sh -c "npm run storybook"
-    tty: true
     
   backend:
     build:
@@ -51,7 +26,19 @@ services:
       - 127.0.0.1:9000:9000
     depends_on:
       - postgres
-      - postgres.test
+      - redis
+    networks:
+      - storage
+
+  redis:
+    build:
+      context: .
+      dockerfile: ./docker/redis.Dockerfile
+    ports:
+      - 127.0.0.1:6379:6379
+    volumes:
+    - ./redis/data:/data
+    command: ["redis-server"]
     networks:
       - storage
 
@@ -62,24 +49,6 @@ services:
     volumes:
       - ./database/postgres:/var/lib/postgresql/data
       - ./database/logs:/var/log
-    environment:
-      POSTGRES_HOST_AUTH_METHOD: 'trust'
-      POSTGRES_DB: 'main'
-      POSTGRES_USER: 'docker'
-      POSTGRES_PASSWORD: 'docker'
-      PGDATA: /var/lib/postgresql/data/pgdata
-      TZ: "Asia/Tokyo"
-      LC_ALL: "C.UTF-8"
-    networks:
-      - storage
-
-  postgres.test:
-    build: 
-      context: .
-      dockerfile: ./docker/postgres.Dockerfile
-    volumes:
-      - ./database.test/postgres:/var/lib/postgresql/data
-      - ./database.test/logs:/var/log
     environment:
       POSTGRES_HOST_AUTH_METHOD: 'trust'
       POSTGRES_DB: 'main'
