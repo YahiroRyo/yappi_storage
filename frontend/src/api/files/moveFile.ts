@@ -12,14 +12,14 @@ type Response = {
   successedResponse?: SuccessedResponse;
 };
 
-export const moveFile = async (
-  fileId: string,
+export const moveFiles = async (
+  fileIds: string[],
   afterParentDirectoryId: string
 ): Promise<Response> => {
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/files/move`, {
     method: "PUT",
     body: JSON.stringify({
-      file_id: fileId,
+      file_ids: fileIds,
       after_parent_directory_id: afterParentDirectoryId,
     }),
     mode: "same-origin",
@@ -42,4 +42,12 @@ export const moveFile = async (
     status: res.status,
     failedResponse: json,
   };
+};
+
+// 後方互換性のために残す
+export const moveFile = async (
+  fileId: string,
+  afterParentDirectoryId: string
+): Promise<Response> => {
+  return moveFiles([fileId], afterParentDirectoryId);
 };

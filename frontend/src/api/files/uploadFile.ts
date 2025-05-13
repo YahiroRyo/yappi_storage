@@ -28,3 +28,18 @@ export const uploadFile = async (
     };
   });
 };
+
+// 複数ファイルを順番にアップロード
+export const uploadFiles = async (
+  client: WebSocket,
+  files: File[]
+): Promise<string[]> => {
+  const urls: string[] = [];
+  
+  for (const file of files) {
+    const url = await uploadFile(client, file);
+    urls.push(url);
+  }
+  
+  return urls;
+};

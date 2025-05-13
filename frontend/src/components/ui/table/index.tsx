@@ -16,9 +16,12 @@ type Props<T extends RowData> = {
   showColumn?: (row: T, key: string) => any;
   rowHeight?: string;
   onSelected?: (datum: T) => void;
+  onMultipleSelected?: (data: T[]) => void;
+  multipleSelectable?: boolean;
   href?: (datum: T) => string;
   selectedRowBackgroundColor?: string;
   selectedChildren: React.ReactNode;
+  onDoubleClick?: (datum: T) => void;
 };
 
 export const SelectableTable = <T extends RowData>({
@@ -28,9 +31,12 @@ export const SelectableTable = <T extends RowData>({
   showColumn,
   rowHeight = "48px",
   onSelected,
+  onMultipleSelected,
+  multipleSelectable = false,
   href,
   selectedRowBackgroundColor,
   selectedChildren,
+  onDoubleClick,
 }: Props<T>) => {
   const router = useRouter();
   const [rowData, setRowData] = useState<
@@ -49,12 +55,25 @@ export const SelectableTable = <T extends RowData>({
   const [isOpendedContextMenu, setIsOpendedContextMenu] = useState(false);
   const mousePosition = useMousePosition();
 
-  useEffect(() => {
+  // 選択中のデータを取得
+  const getSelectedData = () => {
+    const selectedData: T[] = [];
     rowData.forEach((rowDatum, rowIndex) => {
-      if (rowDatum.isSelected && onSelected) {
-        onSelected(data[rowIndex]);
+      if (rowDatum.isSelected) {
+        selectedData.push(data[rowIndex]);
       }
     });
+    return selectedData;
+  };
+
+  useEffect(() => {
+    const selectedData = getSelectedData();
+    if (selectedData.length === 1 && onSelected) {
+      onSelected(selectedData[0]);
+    }
+    if (onMultipleSelected) {
+      onMultipleSelected(selectedData);
+    }
   }, [rowData]);
 
   useEffect(() => {
@@ -109,52 +128,132 @@ export const SelectableTable = <T extends RowData>({
                   : { ...rowStyle }
               }
               className={styles.table__tr}
-              onClick={() => {
+              onClick={(event) => {
+                const ctrlPressed = event.ctrlKey || event.metaKey;
+                
                 setRowData((rowData) => {
-                  const newArray = [
-                    ...rowData.map((rowDatum) => {
-                      rowDatum.isSelected = false;
-                      rowDatum.style = {};
+                  // 複数選択モードでない場合、またはCtrlキーが押されていない場合は従来の挙動
+                  if (!multipleSelectable || (!ctrlPressed && !event.shiftKey)) {
+                    const newArray = [
+                      ...rowData.map((rowDatum) => {
+                        rowDatum.isSelected = false;
+                        rowDatum.style = {};
+                        return rowDatum;
+                      }),
+                    ];
 
-                      return rowDatum;
-                    }),
-                  ];
+                    const currentRow = { ...newArray[rowIndex] };
+                    currentRow.isSelected = !currentRow.isSelected;
 
-                  const currentRow = { ...newArray[rowIndex] };
-                  currentRow.isSelected = !currentRow.isSelected;
+                    if (
+                      selectedRowBackgroundColor &&
+                      currentRow.isSelected &&
+                      !isOpendedContextMenu
+                    ) {
+                      currentRow.style = { ...currentRow.style };
+                      currentRow.style.backgroundColor =
+                        selectedRowBackgroundColor;
+                    }
 
-                  if (
-                    selectedRowBackgroundColor &&
-                    currentRow.isSelected &&
-                    !isOpendedContextMenu
-                  ) {
-                    currentRow.style = { ...currentRow.style };
-                    currentRow.style.backgroundColor =
-                      selectedRowBackgroundColor;
+                    newArray[rowIndex] = currentRow;
+                    return newArray;
+                  } else {
+                    // 複数選択モード時の処理
+                    const newArray = [...rowData];
+                    
+                    // Ctrlキーが押されている場合は個別選択/選択解除
+                    if (ctrlPressed) {
+                      const currentRow = { ...newArray[rowIndex] };
+                      currentRow.isSelected = !currentRow.isSelected;
+                      
+                      if (
+                        selectedRowBackgroundColor &&
+                        currentRow.isSelected &&
+                        !isOpendedContextMenu
+                      ) {
+                        currentRow.style = { ...currentRow.style };
+                        currentRow.style.backgroundColor =
+                          selectedRowBackgroundColor;
+                      } else {
+                        currentRow.style = {};
+                      }
+                      
+                      newArray[rowIndex] = currentRow;
+                    }
+                    // Shiftキーが押されている場合は範囲選択
+                    else if (event.shiftKey) {
+                      // 最後に選択された行を見つける
+                      let lastSelectedIndex = -1;
+                      for (let i = 0; i < newArray.length; i++) {
+                        if (newArray[i].isSelected) {
+                          lastSelectedIndex = i;
+                        }
+                      }
+                      
+                      if (lastSelectedIndex !== -1) {
+                        // 範囲の開始と終了を決定
+                        const start = Math.min(lastSelectedIndex, rowIndex);
+                        const end = Math.max(lastSelectedIndex, rowIndex);
+                        
+                        // 範囲内のすべての行を選択
+                        for (let i = start; i <= end; i++) {
+                          newArray[i].isSelected = true;
+                          if (selectedRowBackgroundColor && !isOpendedContextMenu) {
+                            newArray[i].style = {
+                              ...newArray[i].style,
+                              backgroundColor: selectedRowBackgroundColor
+                            };
+                          }
+                        }
+                      } else {
+                        // 最後に選択された行がない場合は、現在の行を選択
+                        newArray[rowIndex].isSelected = true;
+                        if (selectedRowBackgroundColor && !isOpendedContextMenu) {
+                          newArray[rowIndex].style = {
+                            ...newArray[rowIndex].style,
+                            backgroundColor: selectedRowBackgroundColor
+                          };
+                        }
+                      }
+                    }
+                    
+                    return newArray;
                   }
-
-                  newArray[rowIndex] = currentRow;
-                  return newArray;
                 });
 
-                if (href) {
-                  router.push(href(row));
+                // 単一選択の場合はhrefで移動
+                if (!multipleSelectable || (!ctrlPressed && !event.shiftKey)) {
+                  if (href) {
+                    router.push(href(row));
+                  }
+                }
+              }}
+              onDoubleClick={() => {
+                if (onDoubleClick) {
+                  onDoubleClick(row);
                 }
               }}
               onContextMenu={() => {
                 setIsOpendedContextMenu((value) => !value);
                 setRowData((rowData) => {
-                  const newArray = [
-                    ...rowData.map((rowDatum) => {
-                      rowDatum.isSelected = false;
-                      rowDatum.style = {};
-
-                      return rowDatum;
-                    }),
-                  ];
+                  // 既に選択されている場合はコンテキストメニューを表示するだけ
+                  if (rowData[rowIndex].isSelected) {
+                    return rowData;
+                  }
+                  
+                  // 選択されていない場合は、選択してからコンテキストメニューを表示
+                  const newArray = multipleSelectable ?
+                    [...rowData] :
+                    [
+                      ...rowData.map((rowDatum) => {
+                        rowDatum.isSelected = false;
+                        rowDatum.style = {};
+                        return rowDatum;
+                      }),
+                    ];
 
                   const currentRow = { ...newArray[rowIndex] };
-                  currentRow.isSelected = !currentRow.isSelected;
+                  currentRow.isSelected = true;
 
                   if (
                     selectedRowBackgroundColor &&
@@ -195,7 +294,7 @@ export const SelectableTable = <T extends RowData>({
         </tbody>
       </table>
 
-      {isOpendedContextMenu && (
+      {isOpendedContextMenu && getSelectedData().length > 0 && (
         <Select
           onClose={() => setIsOpendedContextMenu(false)}
           x={mousePosition.x}

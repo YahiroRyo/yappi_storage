@@ -22,6 +22,7 @@ const (
 func (wsc *WsController) UploadFile(c *websocket.Conn) {
 	var (
 		filename string
+		dirname  string
 		url      *string
 	)
 
@@ -52,12 +53,19 @@ func (wsc *WsController) UploadFile(c *websocket.Conn) {
 			}
 
 			if messageCommand == InitializeFileName {
+				storeStoragePath, err := wsc.GetStoreStoragePathService.Execute()
+				if err != nil {
+					log.Println("GetStorageSettingService:", err)
+					break
+				}
+
 				id, err := helper.GenerateSnowflake()
 				if err != nil {
 					log.Println("snowflake:", err)
 					break
 				}
 				filename = fmt.Sprintf("%s%s", *id, filepath.Ext(string(content)))
+				dirname = fmt.Sprintf("%s/%s", storeStoragePath, filename)
 			}
 
 			if messageCommand == FinishedUpload {
@@ -69,7 +77,7 @@ func (wsc *WsController) UploadFile(c *websocket.Conn) {
 			continue
 		}
 
-		url, err = wsc.UploadFileChunkService.Execute(message, filename)
+		url, err = wsc.UploadFileChunkService.Execute(message, dirname)
 		if err != nil {
 			log.Println("UploadFileChunkService:", err)
 			break

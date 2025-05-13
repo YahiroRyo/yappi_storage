@@ -1,6 +1,6 @@
 import { useWsClient } from "@/api/files/client";
-import { registrationFile } from "@/api/files/registrationFile";
-import { uploadFile } from "@/api/files/uploadFile";
+import { registrationFiles } from "@/api/files/registrationFiles";
+import { uploadFiles } from "@/api/files/uploadFile";
 import { Button } from "@/components/ui/button";
 import { GridVerticalRow } from "@/components/ui/grid/gridVerticalRow";
 import { Loading } from "@/components/ui/loading";
@@ -24,42 +24,72 @@ export const UploadFileModal = ({
   setRefreshFiles,
 }: Props) => {
   const [uploadFileFormData, setUploadFileFormData] = useState<{
-    file?: File;
+    files: File[];
     disabled: boolean;
   }>({
-    file: undefined,
+    files: [],
     disabled: false,
   });
 
   const [isLoading, setIsLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
   const wsClient = useWsClient();
 
   const onUploadFile: FormEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault();
 
+    if (uploadFileFormData.files.length === 0) {
+      return;
+    }
+
     setIsLoading(true);
     setUploadFileFormData((value) => ({ ...value, disabled: true }));
+    setUploadProgress(0);
 
-    const url = await uploadFile(wsClient, uploadFileFormData.file!);
-    const res = await registrationFile(
-      url,
-      uploadFileFormData.file!.name,
-      fileToFileKind(uploadFileFormData.file!),
-      parentDirectoryId
-    );
-    setIsLoading(false);
-    setUploadFileFormData((value) => ({ ...value, disabled: false }));
-    setIsOpended(false);
-    setRefreshFiles((value) => !value);
+    try {
+      // すべてのファイルをアップロード
+      const urls = await uploadFiles(wsClient, uploadFileFormData.files);
+      
+      // ファイルの登録情報を作成
+      const registrationFilesData = uploadFileFormData.files.map((file, index) => ({
+        url: urls[index],
+        name: file.name,
+        kind: fileToFileKind(file),
+        parent_directory_id: parentDirectoryId
+      }));
 
-    if (res.status === 200) {
-      console.log("uploaded");
+      // すべてのファイルを登録
+      const res = await registrationFiles(registrationFilesData);
+      
+      setIsLoading(false);
+      setUploadFileFormData({
+        files: [],
+        disabled: false,
+      });
+      setIsOpended(false);
+      setRefreshFiles((value) => !value);
+
+      if (res.status === 200) {
+        console.log("uploaded all files");
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      setIsLoading(false);
+      setUploadFileFormData((value) => ({ ...value, disabled: false }));
     }
+  };
+
+  // 選択したファイルの削除
+  const removeFile = (index: number) => {
+    setUploadFileFormData((prev) => ({
+      ...prev,
+      files: prev.files.filter((_, i) => i !== index)
+    }));
   };
 
   if (isOpended) {
     return (
-      <Modal width="20rem" onClose={() => setIsOpended(false)}>
+      <Modal width="30rem" onClose={() => setIsOpended(false)}>
         <GridVerticalRow gap="1rem">
           <Text size="pixcel" pixcel="1.5rem" fontWeight={400}>
             ファイルアップロード
@@ -68,21 +98,54 @@ export const UploadFileModal = ({
             <GridVerticalRow gap="1rem">
               <input
                 type="file"
+                multiple
                 onChange={(e) => {
-                  const files = e.currentTarget.files;
+                  const fileList = e.currentTarget.files;
 
-                  if (!files || files?.length === 0) {
+                  if (!fileList || fileList?.length === 0) {
                     return;
                   }
 
-                  const file = files[0];
+                  const filesArray = Array.from(fileList);
 
                   setUploadFileFormData((value) => ({
                     ...value,
-                    file,
+                    files: [...value.files, ...filesArray],
                   }));
                 }}
               />
+              
+              {uploadFileFormData.files.length > 0 && (
+                <div style={{ maxHeight: "200px", overflow: "auto", margin: "1rem 0" }}>
+                  <Text size="small" fontWeight={600}>選択されたファイル ({uploadFileFormData.files.length}件):</Text>
+                  <ul style={{ listStyle: "none", padding: 0 }}>
+                    {uploadFileFormData.files.map((file, index) => (
+                      <li key={index} style={{ 
+                        display: "flex", 
+                        justifyContent: "space-between", 
+                        alignItems: "center",
+                        padding: "0.5rem",
+                        borderBottom: `1px solid ${uiConfig.color.surface.high}`
+                      }}>
+                        <Text size="small">
+                          {file.name} ({(file.size / 1024).toFixed(2)} KB)
+                        </Text>
+                        <Button
+                          padding="0.25rem 0.5rem"
+                          color={{
+                            backgroundColor: uiConfig.color.on.secondary.main,
+                            textColor: uiConfig.color.text.high,
+                          }}
+                          onClick={() => removeFile(index)}
+                        >
+                          <Text size="small">削除</Text>
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
               <Button
                 color={{
                   backgroundColor: uiConfig.color.bg.secondary.dark,
@@ -93,12 +156,25 @@ export const UploadFileModal = ({
                 radius="32px"
                 padding="0.5rem 1rem"
                 type="submit"
-                disabled={uploadFileFormData.disabled}
+                disabled={uploadFileFormData.disabled || uploadFileFormData.files.length === 0}
               >
                 <Text size="pixcel" pixcel="1rem" fontWeight={600}>
-                  アップロード
+                  {uploadFileFormData.files.length > 1 ? `${uploadFileFormData.files.length}件のファイルをアップロード` : "アップロード"}
                 </Text>
               </Button>
+              
+              {isLoading && (
+                <div style={{ width: "100%", height: "10px", backgroundColor: uiConfig.color.surface.high, borderRadius: "5px", overflow: "hidden" }}>
+                  <div 
+                    style={{ 
+                      width: `${uploadProgress}%`, 
+                      height: "100%", 
+                      backgroundColor: uiConfig.color.bg.secondary.tint, 
+                      transition: "width 0.3s ease-in-out" 
+                    }} 
+                  />
+                </div>
+              )}
             </GridVerticalRow>
           </form>
         </GridVerticalRow>

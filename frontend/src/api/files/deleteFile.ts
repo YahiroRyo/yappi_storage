@@ -12,10 +12,10 @@ type Response = {
   successedResponse?: SuccessedResponse;
 };
 
-export const deleteFile = async (fileId: string): Promise<Response> => {
+export const deleteFiles = async (fileIds: string[]): Promise<Response> => {
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/files`, {
     method: "DELETE",
-    body: JSON.stringify({ file_id: fileId }),
+    body: JSON.stringify({ file_ids: fileIds }),
     mode: "same-origin",
     credentials: "include",
     headers: {
@@ -36,4 +36,9 @@ export const deleteFile = async (fileId: string): Promise<Response> => {
     status: res.status,
     failedResponse: json,
   };
+};
+
+// 後方互換性のために残す
+export const deleteFile = async (fileId: string): Promise<Response> => {
+  return deleteFiles([fileId]);
 };

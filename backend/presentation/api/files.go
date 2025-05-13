@@ -1,14 +1,13 @@
 package api
 
 import (
-	"github.com/YahiroRyo/yappi_storage/backend/domain/file"
 	"github.com/YahiroRyo/yappi_storage/backend/helper/validate"
 	"github.com/YahiroRyo/yappi_storage/backend/presentation/request"
 	"github.com/gofiber/fiber/v2"
 )
 
-func (api *Api) RegistrationFile(ctx *fiber.Ctx) error {
-	req := request.RegistrationFileRequest{}
+func (api *Api) RegistrationFiles(ctx *fiber.Ctx) error {
+	req := request.RegistrationFilesRequest{}
 
 	if err := ctx.BodyParser(&req); err != nil {
 		return err
@@ -23,10 +22,10 @@ func (api *Api) RegistrationFile(ctx *fiber.Ctx) error {
 		return err
 	}
 
-	file, err := api.RegistrationFileService.Execute(*user, req.Url, file.FileKindFromEnString(req.Kind), req.Name, req.ParentDirectoryId)
+	files, err := api.RegistrationFilesService.Execute(*user, req)
 	if err != nil {
 		return err
 	}
 
-	return ctx.JSON(file)
+	return ctx.JSON(files)
 }

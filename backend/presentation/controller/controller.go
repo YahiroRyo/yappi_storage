@@ -6,11 +6,11 @@ type Controller struct {
 	GetFilesService              service.GetFilesService
 	GetFileService               service.GetFileService
 	SearchFilesService           service.SearchFilesService
-	RegistrationFileService      service.RegistrationFileService
+	RegistrationFilesService     service.RegistrationFilesService
 	RegistrationDirectoryService service.RegistrationDirectoryService
-	MoveFileService              service.MoveFileService
+	MoveFilesService             service.MoveFilesService
 	RenameFileService            service.RenameFileService
-	DeleteFileService            service.DeleteFileService
+	DeleteFilesService           service.DeleteFilesService
 
 	GetLoggedInUserService  service.GetLoggedInUserService
 	LoginService            service.LoginService

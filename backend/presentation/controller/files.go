@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"github.com/YahiroRyo/yappi_storage/backend/domain/file"
 	"github.com/YahiroRyo/yappi_storage/backend/helper/validate"
 	"github.com/YahiroRyo/yappi_storage/backend/presentation/request"
 	"github.com/YahiroRyo/yappi_storage/backend/presentation/response"
@@ -118,8 +117,8 @@ func (controller *Controller) RegistrationDirectory(ctx *fiber.Ctx) error {
 	return ctx.JSON(file)
 }
 
-func (controller *Controller) RegistrationFile(ctx *fiber.Ctx) error {
-	req := request.RegistrationFileRequest{}
+func (controller *Controller) RegistrationFiles(ctx *fiber.Ctx) error {
+	req := request.RegistrationFilesRequest{}
 
 	if err := ctx.BodyParser(&req); err != nil {
 		return err
@@ -139,12 +138,12 @@ func (controller *Controller) RegistrationFile(ctx *fiber.Ctx) error {
 		return err
 	}
 
-	file, err := controller.RegistrationFileService.Execute(*user, req.Url, file.FileKindFromEnString(req.Kind), req.Name, req.ParentDirectoryId)
-	if err != nil {
+	files, err := controller.RegistrationFilesService.Execute(*user, req)
+	if err != nil || len(files) == 0 {
 		return err
 	}
 
-	return ctx.JSON(file)
+	return ctx.JSON(files)
 }
 
 func (controller *Controller) RenameFile(ctx *fiber.Ctx) error {
@@ -176,8 +175,8 @@ func (controller *Controller) RenameFile(ctx *fiber.Ctx) error {
 	return ctx.JSON(file)
 }
 
-func (controller *Controller) MoveFile(ctx *fiber.Ctx) error {
-	req := request.MoveFileRequest{}
+func (controller *Controller) MoveFiles(ctx *fiber.Ctx) error {
+	req := request.MoveFilesRequest{}
 
 	if err := ctx.BodyParser(&req); err != nil {
 		return err
@@ -197,16 +196,16 @@ func (controller *Controller) MoveFile(ctx *fiber.Ctx) error {
 		return err
 	}
 
-	file, err := controller.MoveFileService.Execute(*user, req.FileId, req.AfterParentDirectoryId)
-	if err != nil {
+	files, err := controller.MoveFilesService.Execute(*user, req.FileIds, req.AfterParentDirectoryId)
+	if err != nil || len(files) == 0 {
 		return err
 	}
 
-	return ctx.JSON(file)
+	return ctx.JSON(files)
 }
 
-func (controller *Controller) DeleteFile(ctx *fiber.Ctx) error {
-	req := request.DeleteFileRequest{}
+func (controller *Controller) DeleteFiles(ctx *fiber.Ctx) error {
+	req := request.DeleteFilesRequest{}
 
 	if err := ctx.BodyParser(&req); err != nil {
 		return err
@@ -226,14 +225,9 @@ func (controller *Controller) DeleteFile(ctx *fiber.Ctx) error {
 		return err
 	}
 
-	file, err := controller.GetFileService.Execute(*user, req.FileId)
-	if err != nil {
+	if err := controller.DeleteFilesService.Execute(*user, req.FileIds); err != nil {
 		return err
 	}
 
-	if err != controller.DeleteFileService.Execute(*user, req.FileId) {
-		return err
-	}
-
-	return ctx.Status(200).JSON(file)
+	return ctx.Status(200).JSON(nil)
 }

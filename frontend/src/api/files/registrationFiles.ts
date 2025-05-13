@@ -12,15 +12,19 @@ type Response = {
   successedResponse?: SuccessedResponse;
 };
 
-export const registrationFile = async (
-  url: string,
-  name: string,
-  kind: FileKind,
-  parent_directory_id?: string
+type RegistrationFile = {
+  url: string;
+  name: string;
+  kind: FileKind;
+  parent_directory_id?: string;
+};
+
+export const registrationFiles = async (
+  registrationFiles: RegistrationFile[]
 ): Promise<Response> => {
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/files`, {
     method: "POST",
-    body: JSON.stringify({ name, kind, url, parent_directory_id }),
+    body: JSON.stringify({ registration_files: registrationFiles }),
     mode: "same-origin",
     credentials: "include",
     headers: {

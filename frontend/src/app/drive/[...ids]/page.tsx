@@ -27,6 +27,7 @@ import { DeleteFileModal } from "@/components/fileControl/deleteFileModal";
 import { UploadFileModal } from "@/components/fileControl/uploadFileModal";
 import { RenameFileModal } from "@/components/fileControl/renameFileModal";
 import { FilePreview } from "@/components/fileControl/filePreview";
+import { MoveFileModal } from "@/components/fileControl/moveFileModal";
 
 export default function Directory() {
   const { ids } = useParams();
@@ -45,7 +46,9 @@ export default function Directory() {
   const [isOpendedRenameModal, setIsOpendedRenameModal] = useState(false);
   const [isOpendedDeleteFileModal, setIsOpendedDeleteFileModal] =
     useState(false);
+  const [isOpendedMoveFileModal, setIsOpendedMoveFileModal] = useState(false);
   const [selectingFile, setSelectingFile] = useState<File>();
+  const [selectingFiles, setSelectingFiles] = useState<File[]>([]);
   const [isLoading] = useState(false);
 
   const processedParentDirectoryId = useMemo(() => {
@@ -107,28 +110,80 @@ export default function Directory() {
           マイドライブ
         </Text>
 
-        <Button
-          color={{
-            backgroundColor: uiConfig.color.surface.main,
-            hoverBackgroundColor: uiConfig.color.bg.secondary.container,
-            textColor: uiConfig.color.text.main,
-          }}
-          border={`1px solid ${uiConfig.color.on.main}`}
-          padding=".5rem 1rem"
-          radius="32px"
-          onClick={() => {
-            setIsOpendedCreateSomethingMenu(true);
-          }}
-          textAlign="center"
-        >
-          <Text
-            size="small"
-            fontWeight={700}
-            color={uiConfig.color.text.secondary.container}
+        <div style={{ display: "flex", gap: "1rem" }}>
+          <Button
+            color={{
+              backgroundColor: uiConfig.color.surface.main,
+              hoverBackgroundColor: uiConfig.color.bg.secondary.container,
+              textColor: uiConfig.color.text.main,
+            }}
+            border={`1px solid ${uiConfig.color.on.main}`}
+            padding=".5rem 1rem"
+            radius="32px"
+            onClick={() => {
+              setIsOpendedCreateSomethingMenu(true);
+            }}
+            textAlign="center"
           >
-            新規
-          </Text>
-        </Button>
+            <Text
+              size="small"
+              fontWeight={700}
+              color={uiConfig.color.text.secondary.container}
+            >
+              新規
+            </Text>
+          </Button>
+          
+          {selectingFiles.length > 1 && (
+            <>
+              <Button
+                color={{
+                  backgroundColor: uiConfig.color.surface.main,
+                  hoverBackgroundColor: uiConfig.color.bg.secondary.container,
+                  textColor: uiConfig.color.text.main,
+                }}
+                border={`1px solid ${uiConfig.color.on.main}`}
+                padding=".5rem 1rem"
+                radius="32px"
+                onClick={() => {
+                  setIsOpendedMoveFileModal(true);
+                }}
+                textAlign="center"
+              >
+                <Text
+                  size="small"
+                  fontWeight={700}
+                  color={uiConfig.color.text.secondary.container}
+                >
+                  {selectingFiles.length}件のファイルを移動
+                </Text>
+              </Button>
+              
+              <Button
+                color={{
+                  backgroundColor: uiConfig.color.surface.main,
+                  hoverBackgroundColor: uiConfig.color.bg.secondary.container,
+                  textColor: uiConfig.color.text.main,
+                }}
+                border={`1px solid ${uiConfig.color.on.main}`}
+                padding=".5rem 1rem"
+                radius="32px"
+                onClick={() => {
+                  setIsOpendedDeleteFileModal(true);
+                }}
+                textAlign="center"
+              >
+                <Text
+                  size="small"
+                  fontWeight={700}
+                  color={uiConfig.color.text.secondary.container}
+                >
+                  {selectingFiles.length}件のファイルを削除
+                </Text>
+              </Button>
+            </>
+          )}
+        </div>
 
         {getFilesRes ? (
           <SelectableTable
@@ -168,6 +223,13 @@ export default function Directory() {
             onSelected={(file) => {
               setSelectingFile(file);
             }}
+            onMultipleSelected={(files) => {
+              setSelectingFiles(files);
+              if (files.length === 1) {
+                setSelectingFile(files[0]);
+              }
+            }}
+            multipleSelectable={true}
             selectedChildren={
               <GridVerticalRow gap=".5rem">
                 <Button
@@ -178,6 +240,16 @@ export default function Directory() {
                   }}
                 >
                   名前変更
+                </Button>
+                <Border color={uiConfig.color.surface.high} />
+                <Button
+                  padding="0.5rem 1rem"
+                  color={{ hoverBackgroundColor: uiConfig.color.surface.high }}
+                  onClick={() => {
+                    setIsOpendedMoveFileModal(true);
+                  }}
+                >
+                  移動
                 </Button>
                 <Border color={uiConfig.color.surface.high} />
                 <Button
@@ -202,6 +274,17 @@ export default function Directory() {
               }
               return `/drive/${parentDirectoryId}/${file.id}`;
             }}
+            onDoubleClick={(file) => {
+              if (file.kind === "Directory") {
+                router.push(`/drive/${file.id}`);
+              } else {
+                let parentDirectoryId = "root";
+                if (processedParentDirectoryId) {
+                  parentDirectoryId = processedParentDirectoryId.toString();
+                }
+                router.push(`/drive/${parentDirectoryId}/${file.id}`);
+              }
+            }}
           />
         ) : (
           <></>
@@ -216,6 +299,7 @@ export default function Directory() {
 
         <DeleteFileModal
           selectingFile={selectingFile}
+          selectingFiles={selectingFiles.length > 0 ? selectingFiles : selectingFile ? [selectingFile] : []}
           isOpended={isOpendedDeleteFileModal}
           setIsOpended={setIsOpendedDeleteFileModal}
           setRefreshFiles={setRefreshFiles}
@@ -232,6 +316,13 @@ export default function Directory() {
           selectingFile={selectingFile}
           isOpended={isOpendedRenameModal}
           setIsOpended={setIsOpendedRenameModal}
+          setRefreshFiles={setRefreshFiles}
+        />
+
+        <MoveFileModal
+          selectingFiles={selectingFiles.length > 0 ? selectingFiles : selectingFile ? [selectingFile] : []}
+          isOpened={isOpendedMoveFileModal}
+          setIsOpened={setIsOpendedMoveFileModal}
           setRefreshFiles={setRefreshFiles}
         />
 

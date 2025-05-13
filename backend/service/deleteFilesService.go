@@ -6,21 +6,23 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type DeleteFileService struct {
+type DeleteFilesService struct {
 	Conn     *sqlx.DB
 	FileRepo repository.FileRepositoryInterface
 }
 
-func (service *DeleteFileService) Execute(user user.User, id string) error {
+func (service *DeleteFilesService) Execute(user user.User, fileIds []string) error {
 	tx, err := service.Conn.Beginx()
 	if err != nil {
 		return err
 	}
 
-	err = service.FileRepo.DeleteFile(tx, user, id)
-	if err != nil {
-		tx.Rollback()
-		return err
+	for _, fileId := range fileIds {
+		err = service.FileRepo.DeleteFile(tx, user, fileId)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
 	}
 
 	tx.Commit()

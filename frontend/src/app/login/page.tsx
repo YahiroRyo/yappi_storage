@@ -25,7 +25,7 @@ export default function Page() {
 
     const res = await login(formData.email, formData.password);
     if (res.status === 200) {
-      redirect("/");
+      location.href = '/';
     }
     setDisabled(false);
 

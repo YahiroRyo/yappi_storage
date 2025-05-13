@@ -103,7 +103,7 @@ export const FilePreview = ({ file, onClose }: FilePreviewProps) => {
                 ダウンロード
               </Text>
             </Button>
-            <MuxPlayer src={file.url!} className={styles.filePreview__video} />
+            <MuxPlayer  src={file.url!} className={styles.filePreview__video} />
           </GridVerticalRow>
         </div>
       </div>

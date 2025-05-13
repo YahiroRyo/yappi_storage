@@ -17,11 +17,11 @@ func SetRoutes(app *fiber.App, controller controller.Controller, api api.Api, ws
 	files := app.Group("/files").Use(middleware.AuthenticateLoggedInUserMiddleware)
 	{
 		files.Get("/", controller.GetFiles)
-		files.Post("/", controller.RegistrationFile)
+		files.Post("/", controller.RegistrationFiles)
 		files.Post("/directory", controller.RegistrationDirectory)
-		files.Put("/move", controller.MoveFile)
+		files.Put("/move", controller.MoveFiles)
 		files.Put("/rename", controller.RenameFile)
-		files.Delete("/", controller.DeleteFile)
+		files.Delete("/", controller.DeleteFiles)
 		files.Get("/file/:file_id", controller.GetFile)
 	}
 
@@ -39,7 +39,7 @@ func SetRoutes(app *fiber.App, controller controller.Controller, api api.Api, ws
 
 	v1 := app.Group("/v1").Use(middleware.AuthenticateLoggedInUserMiddlewareByToken)
 	{
-		v1.Post("/files", api.RegistrationFile)
+		v1.Post("/files", api.RegistrationFiles)
 		v1.Get("/ws/uploadfile", websocket.New(wsController.UploadFile))
 	}
 }

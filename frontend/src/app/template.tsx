@@ -13,7 +13,6 @@ export default function RootTemplate({
   children: React.ReactNode;
 }>) {
   const res = use<Response>(getLoggedInUser());
-
   return (
     <Suspense
       fallback={

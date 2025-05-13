@@ -13,15 +13,16 @@
 .loading {
   display: inline-block;
   vertical-align: middle;
-  color: #666;
+  color: #aaa;
   line-height: 1;
-  width: 1em;
-  height: 1em;
-  border: 0.12em solid currentColor;
-  border-top-color: rgba(102, 102, 102, 0.3);
+  width: 10rem;
+  height: 10rem;
+  border: 1rem solid currentColor;
+  border-top-color: rgba(255, 255, 255);
   border-radius: 50%;
   box-sizing: border-box;
   animation: rotate 1s linear infinite;
+  z-index: 1000;
 }
 
 @keyframes rotate {

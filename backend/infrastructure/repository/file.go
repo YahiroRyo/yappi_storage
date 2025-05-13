@@ -3,12 +3,16 @@ package repository
 import (
 	"errors"
 	"fmt"
+	"log"
+	"math"
 	"os"
+	"path/filepath"
 
 	"github.com/YahiroRyo/yappi_storage/backend/domain/file"
 	"github.com/YahiroRyo/yappi_storage/backend/domain/user"
 	"github.com/YahiroRyo/yappi_storage/backend/domain/vector"
 	"github.com/YahiroRyo/yappi_storage/backend/infrastructure/database"
+	yaml "github.com/goccy/go-yaml"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -23,12 +27,51 @@ type FileRepositoryInterface interface {
 		pageSize int,
 	) (*file.Files, error)
 	RegistrationFile(tx *sqlx.Tx, user user.User, file file.File) (*file.File, error)
-	UploadFileChunk(file []byte, filename string) (*string, error)
+	UploadFileChunk(file []byte, dirname string) (*string, error)
 	UpdateFile(tx *sqlx.Tx, user user.User, file file.File) (*file.File, error)
 	DeleteFile(tx *sqlx.Tx, user user.User, id string) error
+	GetStorageSetting() ([]string, error)
+	GetStoreStoragePath() (string, error)
 }
 
 type FileRepository struct {
+}
+
+var storePaths []string
+
+func init() {
+	storageConfigFile, err := os.ReadFile("./storage_config.yaml")
+	if err != nil {
+		log.Fatalf("error reading file: %v", err)
+	}
+	storageConfig := make(map[string]interface{})
+	yaml.Unmarshal(storageConfigFile, &storageConfig)
+
+	for _, mount := range storageConfig["mounts"].([]interface{}) {
+		mountMap := mount.(map[string]interface{})
+
+		if mountMap["dirname"] == nil {
+			log.Fatalf("dirname is not set")
+			break
+		}
+		if mountMap["path"] == nil {
+			log.Fatalf("path is not set")
+			break
+		}
+
+		dirname := mountMap["dirname"].(string)
+		linkPath := mountMap["path"].(string)
+
+		storePaths = append(storePaths, dirname)
+
+		if _, err := os.Stat(fmt.Sprintf("./storage/files/%s", dirname)); os.IsNotExist(err) {
+			os.MkdirAll(fmt.Sprintf("./storage/files/%s", dirname), 0755)
+		}
+
+		if _, err := os.Stat(linkPath); os.IsNotExist(err) {
+			os.Symlink(fmt.Sprintf("./storage/files/%s", dirname), linkPath)
+		}
+	}
 }
 
 func (repo *FileRepository) GetFiles(db *sqlx.DB, user user.User, parentDirectoryId *string, currentPageCount int, pageSize int) (*file.Files, error) {
@@ -211,13 +254,13 @@ func (repo *FileRepository) UpdateFile(tx *sqlx.Tx, user user.User, file file.Fi
 	return &file, nil
 }
 
-func (repo *FileRepository) UploadFileChunk(file []byte, filename string) (*string, error) {
-	f, err := os.OpenFile(fmt.Sprintf("storage/files/%s", filename), os.O_CREATE|os.O_RDWR|os.O_APPEND, 0666)
+func (repo *FileRepository) UploadFileChunk(file []byte, dirname string) (*string, error) {
+	f, err := os.OpenFile(fmt.Sprintf("storage/files/%s", dirname), os.O_CREATE|os.O_RDWR|os.O_APPEND, 0666)
 	if err != nil {
 		return nil, err
 	}
 
-	url := fmt.Sprintf("%s/storage/files/%s", os.Getenv("BASE_URL"), filename)
+	url := fmt.Sprintf("%s/storage/files/%s", os.Getenv("BASE_URL"), dirname)
 
 	defer f.Close()
 
@@ -242,4 +285,42 @@ func (repo *FileRepository) DeleteFile(tx *sqlx.Tx, user user.User, id string) e
 	}
 
 	return nil
+}
+
+func (repo *FileRepository) GetStorageSetting() ([]string, error) {
+	return storePaths, nil
+}
+
+func (repo *FileRepository) GetStoreStoragePath() (string, error) {
+	result := struct {
+		Path string
+		Size int64
+	}{
+		Path: "",
+		Size: int64(math.MaxInt64),
+	}
+
+	for _, storePath := range storePaths {
+		var dirSize int64
+		err := filepath.Walk(fmt.Sprintf("storage/files/%s", storePath), func(_ string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if !info.IsDir() {
+				dirSize += info.Size()
+			}
+			return nil
+		})
+		if err != nil {
+			return "", err
+		}
+
+		fmt.Println(storePath, dirSize, result.Size)
+		if result.Size > dirSize {
+			result.Path = storePath
+			result.Size = dirSize
+		}
+	}
+
+	return result.Path, nil
 }
