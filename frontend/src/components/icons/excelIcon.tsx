@@ -4,7 +4,7 @@ type Props = {
   style?: CSSProperties;
 };
 
-export const DirectoryIcon = ({ style }: Props) => {
+export const ExcelIcon = ({ style }: Props) => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -20,11 +20,17 @@ export const DirectoryIcon = ({ style }: Props) => {
         strokeWidth="2"
       />
       <path
-        d="M4 8H20M8 12H16"
+        d="M8 8H16M8 12H16M8 16H16"
+        stroke="white"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <path
+        d="M8 8V16M12 8V16M16 8V16"
         stroke="white"
         strokeWidth="1.5"
         strokeLinecap="round"
       />
     </svg>
   );
-};
+}; 

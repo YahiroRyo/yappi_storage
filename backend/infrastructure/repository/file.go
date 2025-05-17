@@ -293,7 +293,7 @@ func (repo *FileRepository) UploadFileChunk(file []byte, dirname string) (*strin
 		return nil, err
 	}
 
-	url := fmt.Sprintf("%s/storage/files/%s", os.Getenv("BASE_URL"), dirname)
+	url := fmt.Sprintf("%s/%s", os.Getenv("BASE_URL"), dirname)
 
 	defer f.Close()
 

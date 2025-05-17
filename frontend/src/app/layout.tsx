@@ -3,6 +3,7 @@ import { Noto_Sans_JP } from "next/font/google";
 import "./globals.scss";
 
 import { RejectContextMenu } from "@/components/rejectContextMenu";
+import { ViwerSetting } from "@/components/viwerSetting";
 
 const notoSansJP = Noto_Sans_JP({
   weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
@@ -19,13 +20,16 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  
   return (
     <html lang="ja">
       <body
         style={{ fontFamily: `${notoSansJP.style.fontFamily}` }}
         className={`${notoSansJP.className}`}
       >
-        <RejectContextMenu>{children}</RejectContextMenu>
+        <ViwerSetting>
+          <RejectContextMenu>{children}</RejectContextMenu>
+        </ViwerSetting>
       </body>
     </html>
   );

@@ -1,3 +1,5 @@
+@use "sass:color";
+
 .alert {
   padding: 1rem;
   border-radius: 8px;
@@ -7,18 +9,18 @@
   &_success {
     background-color: #008000;
     color: #fff;
-    border-radius: darken(#008000, 20%);
+    border-radius: color.adjust(#008000, $lightness: -20%);
   }
 
   &_warning {
     background-color: #ffa500;
     color: #fff;
-    border-radius: darken(#ffa500, 20%);
+    border-radius: color.adjust(#ffa500, $lightness: -20%);
   }
 
   &_error {
     background-color: #ff0000;
     color: #fff;
-    border-radius: darken(#ff0000, 20%);
+    border-radius: color.adjust(#ff0000, $lightness: -20%);
   }
 }

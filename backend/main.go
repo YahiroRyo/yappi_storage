@@ -174,6 +174,8 @@ func main() {
 		log.Fatalf("error opening file: %v", err)
 	}
 
+	defer file.Close()
+
 	app.Use(cors.New())
 	app.Use(requestid.New())
 	app.Use(logger.New(logger.Config{
@@ -182,8 +184,6 @@ func main() {
 		TimeFormat: "2006-01-02 15:04:05",
 		TimeZone:   "Asia/Tokyo",
 	}))
-
-	defer file.Close()
 
 	route.SetRoutes(
 		app,

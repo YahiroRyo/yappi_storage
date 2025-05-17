@@ -8,61 +8,23 @@ export const VideoIcon = ({ style }: Props) => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 257 257"
-      width="32px"
-      height="32px"
+      viewBox="0 0 24 24"
+      width="24px"
+      height="24px"
       style={style}
     >
-      <g>
-        <rect
-          x=".5"
-          y=".5"
-          width="256"
-          height="256"
-          rx="20"
-          ry="20"
-          style={{ fill: "#231815" }}
-        />
-        <rect
-          x=".5"
-          y=".5"
-          width="256"
-          height="256"
-          rx="20"
-          ry="20"
-          style={{ fill: "none", stroke: "#231815", strokeMiterlimit: 10 }}
-        />
-      </g>
-      <g>
-        <rect
-          x="48.48"
-          y="77.04"
-          width="160.04"
-          height="102.91"
-          rx="10"
-          ry="10"
-          style={{ fill: "#fff" }}
-        />
-        <rect
-          x="48.48"
-          y="77.04"
-          width="160.04"
-          height="102.91"
-          rx="10"
-          ry="10"
-          style={{ fill: "none", stroke: "#231815", strokeMiterlimit: 10 }}
-        />
-      </g>
-      <g>
-        <path
-          d="M114.09,104.44c-4.84-2.62-8.8-.26-8.8,5.24v37.63c0,5.5,3.82,7.62,8.49,4.71l32.56-20.27c4.67-2.91,4.53-7.43-.31-10.04l-31.95-17.28Z"
-          style={{ fill: "#231815" }}
-        />
-        <path
-          d="M114.09,104.44c-4.84-2.62-8.8-.26-8.8,5.24v37.63c0,5.5,3.82,7.62,8.49,4.71l32.56-20.27c4.67-2.91,4.53-7.43-.31-10.04l-31.95-17.28Z"
-          style={{ fill: "none", stroke: "#231815", strokeMiterlimit: 10 }}
-        />
-      </g>
+      <path
+        d="M4 6.5C4 5.11929 5.11929 4 6.5 4H17.5C18.8807 4 20 5.11929 20 6.5V17.5C20 18.8807 18.8807 20 17.5 20H6.5C5.11929 20 4 18.8807 4 17.5V6.5Z"
+        fill="#1a1a1a"
+        stroke="#1a1a1a"
+        strokeWidth="2"
+      />
+      <path
+        d="M10 8.5L16 12L10 15.5V8.5Z"
+        fill="white"
+        stroke="white"
+        strokeWidth="1.5"
+      />
     </svg>
   );
 };

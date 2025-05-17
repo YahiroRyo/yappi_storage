@@ -7,43 +7,31 @@ type Props = {
 export const ImageIcon = ({ style }: Props) => {
   return (
     <svg
-      data-name="レイヤー 1"
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 257 257"
-      width="32px"
-      height="32px"
+      viewBox="0 0 24 24"
+      width="24px"
+      height="24px"
       style={style}
     >
-      <g>
-        <rect
-          x=".5"
-          y=".5"
-          width="256"
-          height="256"
-          rx="20"
-          ry="20"
-          style={{ fill: "#231815" }}
-        />
-        <rect
-          x=".5"
-          y=".5"
-          width="256"
-          height="256"
-          rx="20"
-          ry="20"
-          style={{ fill: "none", stroke: "#231815", strokeMiterlimit: 10 }}
-        />
-      </g>
-      <g>
-        <path
-          d="M38.29,227.74c-3.09,4.55-1.12,8.27,4.38,8.27h172.91c5.5,0,7.99-4.03,5.54-8.95l-44.68-89.61c-2.45-4.92-6.4-4.89-8.76.08l-34.25,71.94c-2.36,4.97-7.1,5.5-10.52,1.2l-33.15-41.74c-3.42-4.31-8.75-4.11-11.84.44l-39.63,58.37Z"
-          style={{ fill: "#fff" }}
-        />
-        <path
-          d="M38.29,227.74c-3.09,4.55-1.12,8.27,4.38,8.27h172.91c5.5,0,7.99-4.03,5.54-8.95l-44.68-89.61c-2.45-4.92-6.4-4.89-8.76.08l-34.25,71.94c-2.36,4.97-7.1,5.5-10.52,1.2l-33.15-41.74c-3.42-4.31-8.75-4.11-11.84.44l-39.63,58.37Z"
-          style={{ fill: "none", stroke: "#231815", strokeMiterlimit: 10 }}
-        />
-      </g>
+      <path
+        d="M4 6.5C4 5.11929 5.11929 4 6.5 4H17.5C18.8807 4 20 5.11929 20 6.5V17.5C20 18.8807 18.8807 20 17.5 20H6.5C5.11929 20 4 18.8807 4 17.5V6.5Z"
+        fill="#1a1a1a"
+        stroke="#1a1a1a"
+        strokeWidth="2"
+      />
+      <path
+        d="M7 9.5C7 8.11929 7.89543 7 9 7C10.1046 7 11 8.11929 11 9.5C11 10.8807 10.1046 12 9 12C7.89543 12 7 10.8807 7 9.5Z"
+        fill="white"
+        stroke="white"
+        strokeWidth="1.5"
+      />
+      <path
+        d="M4 17L8 13L12 17L16 13L20 17"
+        stroke="white"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 };

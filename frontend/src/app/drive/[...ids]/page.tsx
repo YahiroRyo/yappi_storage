@@ -51,25 +51,20 @@ export default function Directory() {
   const [selectingFiles, setSelectingFiles] = useState<File[]>([]);
   const [isLoading] = useState(false);
 
-  const processedParentDirectoryId = useMemo(() => {
-    let parentDirectoryIdForFetch: string | undefined = undefined;
-    if (ids && ids.length) {
-      const parentDirectoryId = ids[0];
-      if (parentDirectoryId !== "root") {
-        parentDirectoryIdForFetch = parentDirectoryId;
-      }
-    }
-
-    return parentDirectoryIdForFetch;
-  }, [ids]);
-
   const fileId = useMemo(() => {
-    let fileIdForFetch: string | undefined = undefined;
-    if (ids && ids.length >= 1) {
-      fileIdForFetch = ids[1];
+    if (ids && ids.length > 1) {
+      return ids[1];
     }
-    return fileIdForFetch;
+    return undefined;
   }, [ids]);
+
+  const processedParentDirectoryId = useMemo(() => {
+    let result = pathname;
+    if (fileId) {
+      result = result.replace("/" + fileId, "");
+    }
+    return result;
+  }, [fileId, pathname]);
 
   const exceptFileIdPathname = useMemo(() => {
     let result = pathname;

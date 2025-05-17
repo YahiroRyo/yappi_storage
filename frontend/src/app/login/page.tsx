@@ -8,7 +8,6 @@ import { GridVerticalRow } from "@/components/ui/grid/gridVerticalRow";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import { uiConfig } from "@/components/ui/uiConfig";
-import { redirect } from "next/navigation";
 import { useState } from "react";
 
 export default function Page() {

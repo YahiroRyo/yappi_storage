@@ -4,7 +4,7 @@ type Props = {
   style?: CSSProperties;
 };
 
-export const DirectoryIcon = ({ style }: Props) => {
+export const PowerPointIcon = ({ style }: Props) => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -20,11 +20,17 @@ export const DirectoryIcon = ({ style }: Props) => {
         strokeWidth="2"
       />
       <path
-        d="M4 8H20M8 12H16"
+        d="M8 8H16M8 12H16M8 16H12"
+        stroke="white"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <path
+        d="M14 16C14 14.3431 15.3431 13 17 13C18.6569 13 20 14.3431 20 16C20 17.6569 18.6569 19 17 19C15.3431 19 14 17.6569 14 16Z"
         stroke="white"
         strokeWidth="1.5"
         strokeLinecap="round"
       />
     </svg>
   );
-};
+}; 

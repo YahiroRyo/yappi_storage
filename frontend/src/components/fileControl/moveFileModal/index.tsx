@@ -5,7 +5,7 @@ import { GridVerticalRow } from "@/components/ui/grid/gridVerticalRow";
 import { Modal } from "@/components/ui/modal";
 import { Text } from "@/components/ui/text";
 import { uiConfig } from "@/components/ui/uiConfig";
-import { File, FileKind } from "@/types/file";
+import { File } from "@/types/file";
 import { useEffect, useState } from "react";
 import { SelectableTable } from "@/components/ui/table";
 import { FileIconKind } from "@/components/fileIconKind";
@@ -130,7 +130,7 @@ export const MoveFileModal = ({
       setBreadcrumbs([{ id: undefined, name: "ルート" }]);
       setSelectedDirectory(null);
     }
-  }, [isOpened]);
+  }, [isOpened, fetchDirectories]);
 
   if (!isOpened) {
     return null;
