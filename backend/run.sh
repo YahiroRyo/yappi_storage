@@ -1,7 +1,7 @@
 #!/bin/bash
 
 main() {
-    cd infrastructure/dactabase/goose || exit
+    cd ~/backend/infrastructure/dactabase/goose || exit
     go tool goose up
     cd ~/ || exit
     go build -o backend ./main.go
