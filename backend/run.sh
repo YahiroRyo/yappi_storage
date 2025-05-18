@@ -1,9 +1,9 @@
 #!/bin/bash
 
 main() {
-    cd ~/go/src/github.com/YahiroRyo/yappi_storage/backend/infrastructure/dactabase/goose || exit
+    cd /go/src/github.com/YahiroRyo/yappi_storage/backend/infrastructure/database/goose || exit
     go tool goose up
-    cd ~/ || exit
+    cd /go/src/github.com/YahiroRyo/yappi_storage/backend || exit
     go build -o backend ./main.go
     ./backend
 }
