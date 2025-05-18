@@ -2,7 +2,7 @@
 
 main() {
     export COMPOSE_FILE=production.yaml
-    docker compose up -d
+    docker compose up --build
 }
 
 main
