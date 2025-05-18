@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/cockroachdb/errors"
 	"github.com/jmoiron/sqlx"
 
 	"github.com/YahiroRyo/yappi_storage/backend/domain/file"
@@ -17,8 +18,13 @@ type SearchFilesService struct {
 func (service *SearchFilesService) Execute(user user.User, query string, currentPageCount int, pageSize int) (*file.Files, error) {
 	embedding, err := service.ChatGPTRepo.GetEmbedding(query)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
-	return service.FileRepo.SearchFiles(service.Conn, user, *embedding, currentPageCount, pageSize)
+	files, err := service.FileRepo.SearchFiles(service.Conn, user, *embedding, currentPageCount, pageSize)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return files, nil
 }

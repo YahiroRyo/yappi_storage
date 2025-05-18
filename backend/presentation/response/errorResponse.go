@@ -7,7 +7,7 @@ import (
 )
 
 type validationErrorResponse struct {
-	Errors []string `json:"errors"`
+	Errors []string `json:"github.com/cockroachdb/errors"`
 }
 
 func ValidationErrorResponse(ctx *fiber.Ctx, wrapedErr error) error {

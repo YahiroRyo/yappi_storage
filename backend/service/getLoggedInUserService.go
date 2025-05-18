@@ -1,6 +1,8 @@
 package service
 
 import (
+	"github.com/cockroachdb/errors"
+
 	"github.com/YahiroRyo/yappi_storage/backend/domain/user"
 	"github.com/YahiroRyo/yappi_storage/backend/infrastructure/repository"
 	"github.com/gofiber/fiber/v2/middleware/session"
@@ -13,5 +15,9 @@ type GetLoggedInUserService struct {
 }
 
 func (service *GetLoggedInUserService) Execute(sess *session.Session) (*user.User, error) {
-	return service.UserRepo.GetLoggedInUser(service.Conn, sess)
+	user, err := service.UserRepo.GetLoggedInUser(service.Conn, sess)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return user, nil
 }

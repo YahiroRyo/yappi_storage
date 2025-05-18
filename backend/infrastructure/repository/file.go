@@ -1,13 +1,12 @@
 package repository
 
 import (
-	"errors"
 	"fmt"
 	"log"
-	"math"
 	"os"
-	"path/filepath"
 	"time"
+
+	"github.com/cockroachdb/errors"
 
 	"github.com/YahiroRyo/yappi_storage/backend/domain/file"
 	"github.com/YahiroRyo/yappi_storage/backend/domain/user"
@@ -47,10 +46,12 @@ var storePaths []string
 func init() {
 	storageConfigFile, err := os.ReadFile("./storage_config.yaml")
 	if err != nil {
-		log.Fatalf("error reading file: %v", err)
+		log.Fatalf("error reading file: %v", errors.WithStack(err))
 	}
 	storageConfig := make(map[string]interface{})
-	yaml.Unmarshal(storageConfigFile, &storageConfig)
+	if err := yaml.Unmarshal(storageConfigFile, &storageConfig); err != nil {
+		log.Fatalf("error unmarshaling yaml: %v", errors.WithStack(err))
+	}
 
 	for _, mount := range storageConfig["mounts"].([]interface{}) {
 		mountMap := mount.(map[string]interface{})
@@ -70,11 +71,15 @@ func init() {
 		storePaths = append(storePaths, dirname)
 
 		if _, err := os.Stat(fmt.Sprintf("./storage/files/%s", dirname)); os.IsNotExist(err) {
-			os.MkdirAll(fmt.Sprintf("./storage/files/%s", dirname), 0755)
+			if err := os.MkdirAll(fmt.Sprintf("./storage/files/%s", dirname), 0755); err != nil {
+				log.Fatalf("error creating directory: %v", errors.WithStack(err))
+			}
 		}
 
 		if _, err := os.Stat(linkPath); os.IsNotExist(err) {
-			os.Symlink(fmt.Sprintf("./storage/files/%s", dirname), linkPath)
+			if err := os.Symlink(fmt.Sprintf("./storage/files/%s", dirname), linkPath); err != nil {
+				log.Fatalf("error creating symlink: %v", errors.WithStack(err))
+			}
 		}
 	}
 }
@@ -106,7 +111,7 @@ func (repo *FileRepository) GetFiles(db *sqlx.DB, user user.User, parentDirector
 
 			rows, err := db.NamedQuery(q, args)
 			if err != nil {
-				return nil, errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err)
+				return nil, errors.WithStack(errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err))
 			}
 
 			files := make(file.Files, 0)
@@ -114,7 +119,7 @@ func (repo *FileRepository) GetFiles(db *sqlx.DB, user user.User, parentDirector
 			for rows.Next() {
 				var f database.File
 				if err := rows.StructScan(&f); err != nil {
-					return nil, errors.Join(FieldSQLError{Code: 500, Message: "スキャンエラー"}, err)
+					return nil, errors.WithStack(errors.Join(FieldSQLError{Code: 500, Message: "スキャンエラー"}, err))
 				}
 				e := f.ToEntity()
 
@@ -126,7 +131,7 @@ func (repo *FileRepository) GetFiles(db *sqlx.DB, user user.User, parentDirector
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return &files, nil
@@ -147,13 +152,13 @@ func (repo *FileRepository) GetFileByID(db *sqlx.DB, user user.User, id string) 
 		Do: func(c *cache.Item) (interface{}, error) {
 			rows, err := db.NamedQuery("SELECT * FROM files WHERE user_id = :user_id AND id = :id", args)
 			if err != nil {
-				return nil, errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err)
+				return nil, errors.WithStack(errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err))
 			}
 
 			var file database.File
 			for rows.Next() {
 				if err := rows.StructScan(&file); err != nil {
-					return nil, errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err)
+					return nil, errors.WithStack(errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err))
 				}
 			}
 
@@ -162,7 +167,7 @@ func (repo *FileRepository) GetFileByID(db *sqlx.DB, user user.User, id string) 
 	})
 
 	if err != nil {
-		return nil, errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err)
+		return nil, errors.WithStack(errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err))
 	}
 
 	return &f, nil
@@ -205,14 +210,16 @@ func (repo *FileRepository) SearchFiles(
 
 	rows, err := db.NamedQuery(q, args)
 	if err != nil {
-		return nil, errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err)
+		return nil, errors.WithStack(errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err))
 	}
 
 	files := make(file.Files, 0)
 
 	for rows.Next() {
 		var f database.File
-		rows.Scan(&f)
+		if err := rows.Scan(&f); err != nil {
+			return nil, errors.WithStack(errors.Join(FieldSQLError{Code: 500, Message: "スキャンエラー"}, err))
+		}
 		e := f.ToEntity()
 
 		files = append(files, e)
@@ -247,61 +254,50 @@ func (repo *FileRepository) RegistrationFile(tx *sqlx.Tx, user user.User, file f
 		file.UpdatedAt,
 	)
 	if err != nil {
-		return nil, errors.Join(FieldSQLError{Message: "エラーが発生しました。", Code: 500}, err)
-	}
-
-	return &file, nil
-}
-
-func (repo *FileRepository) UpdateFile(tx *sqlx.Tx, user user.User, file file.File) (*file.File, error) {
-	args := map[string]any{
-		"parent_directory_id": file.ParentDirectoryID,
-		"embedding":           file.Embedding,
-		"kind":                file.Kind,
-		"url":                 file.Url,
-		"name":                file.Name,
-		"id":                  file.ID,
-		"user_id":             user.ID,
-	}
-
-	_, err := tx.NamedExec(`
-		UPDATE files
-		SET
-			parent_directory_id = :parent_directory_id,
-			embedding = :embedding,
-			kind = :kind,
-			url = :url,
-			name = :name
-		WHERE
-			id = :id
-		AND
-			user_id = :user_id
-		`,
-		args,
-	)
-
-	if err != nil {
-		return nil, errors.Join(FieldSQLError{Message: "エラーが発生しました。", Code: 500}, err)
+		return nil, errors.WithStack(errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err))
 	}
 
 	return &file, nil
 }
 
 func (repo *FileRepository) UploadFileChunk(file []byte, dirname string) (*string, error) {
-	f, err := os.OpenFile(fmt.Sprintf("storage/files/%s", dirname), os.O_CREATE|os.O_RDWR|os.O_APPEND, 0666)
+	id := fmt.Sprintf("%d", time.Now().UnixNano())
+	path := fmt.Sprintf("./storage/files/%s/%s", dirname, id)
+
+	if err := os.WriteFile(path, file, 0644); err != nil {
+		return nil, errors.WithStack(errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err))
+	}
+
+	return &id, nil
+}
+
+func (repo *FileRepository) UpdateFile(tx *sqlx.Tx, user user.User, file file.File) (*file.File, error) {
+	_, err := tx.Exec(`
+		UPDATE files
+		SET
+			parent_directory_id = $1,
+			embedding = $2,
+			kind = $3,
+			url = $4,
+			name = $5,
+			updated_at = $6
+		WHERE
+			id = $7
+			AND user_id = $8`,
+		file.ParentDirectoryID,
+		file.Embedding,
+		file.Kind,
+		file.Url,
+		file.Name,
+		file.UpdatedAt,
+		file.ID,
+		user.ID,
+	)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err))
 	}
 
-	url := fmt.Sprintf("%s/%s", os.Getenv("BASE_URL"), dirname)
-
-	defer f.Close()
-
-	if _, err := f.Write(file); err != nil {
-		return &url, err
-	}
-
-	return &url, nil
+	return &file, nil
 }
 
 func (repo *FileRepository) DeleteFile(tx *sqlx.Tx, user user.User, id string) error {
@@ -309,12 +305,12 @@ func (repo *FileRepository) DeleteFile(tx *sqlx.Tx, user user.User, id string) e
 		DELETE FROM files
 		WHERE
 			id = $1
-		AND
-			user_id = $2
-	`, id, user.ID)
-
+			AND user_id = $2`,
+		id,
+		user.ID,
+	)
 	if err != nil {
-		return errors.Join(FieldSQLError{Message: "エラーが発生しました。", Code: 500}, err)
+		return errors.WithStack(errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err))
 	}
 
 	return nil
@@ -325,35 +321,5 @@ func (repo *FileRepository) GetStorageSetting() ([]string, error) {
 }
 
 func (repo *FileRepository) GetStoreStoragePath() (string, error) {
-	result := struct {
-		Path string
-		Size int64
-	}{
-		Path: "",
-		Size: int64(math.MaxInt64),
-	}
-
-	for _, storePath := range storePaths {
-		var dirSize int64
-		err := filepath.Walk(fmt.Sprintf("storage/files/%s", storePath), func(_ string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			if !info.IsDir() {
-				dirSize += info.Size()
-			}
-			return nil
-		})
-		if err != nil {
-			return "", err
-		}
-
-		fmt.Println(storePath, dirSize, result.Size)
-		if result.Size > dirSize {
-			result.Path = storePath
-			result.Size = dirSize
-		}
-	}
-
-	return result.Path, nil
+	return "./storage/files", nil
 }

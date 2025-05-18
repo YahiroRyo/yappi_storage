@@ -1,8 +1,9 @@
 package service
 
 import (
-	"errors"
 	"sync"
+
+	"github.com/cockroachdb/errors"
 
 	"github.com/YahiroRyo/yappi_storage/backend/domain/file"
 	"github.com/YahiroRyo/yappi_storage/backend/domain/user"
@@ -18,7 +19,7 @@ type MoveFilesService struct {
 func (service *MoveFilesService) Execute(user user.User, fileIds []string, afterParentDirectoryId string) ([]file.File, error) {
 	tx, err := service.Conn.Beginx()
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	files := []file.File{}
@@ -30,12 +31,12 @@ func (service *MoveFilesService) Execute(user user.User, fileIds []string, after
 		go func(fileId string) {
 			f, err := service.FileRepo.GetFileByID(service.Conn, user, fileId)
 			if err != nil {
-				result = errors.Join(result, err)
+				result = errors.Join(result, errors.WithStack(err))
 				return
 			}
 
 			if f.ParentDirectoryID != nil && *f.ParentDirectoryID == afterParentDirectoryId {
-				result = errors.Join(result, errors.New("ファイルはすでに指定のディレクトリにあります"))
+				result = errors.Join(result, errors.WithStack(errors.New("ファイルはすでに指定のディレクトリにあります")))
 				return
 			}
 
@@ -53,7 +54,7 @@ func (service *MoveFilesService) Execute(user user.User, fileIds []string, after
 
 			file, err := service.FileRepo.UpdateFile(tx, user, movedDirectoryFile)
 			if err != nil {
-				result = errors.Join(result, err)
+				result = errors.Join(result, errors.WithStack(err))
 				return
 			}
 
@@ -65,7 +66,11 @@ func (service *MoveFilesService) Execute(user user.User, fileIds []string, after
 
 	if result != nil {
 		tx.Rollback()
-		return nil, result
+		return nil, errors.WithStack(result)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, errors.WithStack(err)
 	}
 
 	return files, nil

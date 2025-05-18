@@ -1,6 +1,8 @@
 package service
 
 import (
+	"github.com/cockroachdb/errors"
+
 	"github.com/YahiroRyo/yappi_storage/backend/domain/file"
 	"github.com/YahiroRyo/yappi_storage/backend/domain/user"
 	"github.com/YahiroRyo/yappi_storage/backend/infrastructure/repository"
@@ -15,8 +17,18 @@ type UpdateFileService struct {
 func (service *UpdateFileService) Execute(user user.User, file file.File) (*file.File, error) {
 	tx, err := service.Conn.Beginx()
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
-	return service.FileRepo.UpdateFile(tx, user, file)
+	updatedFile, err := service.FileRepo.UpdateFile(tx, user, file)
+	if err != nil {
+		tx.Rollback()
+		return nil, errors.WithStack(err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return updatedFile, nil
 }

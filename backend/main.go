@@ -15,6 +15,7 @@ import (
 	"github.com/YahiroRyo/yappi_storage/backend/presentation/middleware"
 	"github.com/YahiroRyo/yappi_storage/backend/presentation/ws"
 	"github.com/YahiroRyo/yappi_storage/backend/service"
+	"github.com/cockroachdb/errors"
 	"github.com/go-redis/cache/v9"
 	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
@@ -160,18 +161,18 @@ func main() {
 	err := godotenv.Load(".env")
 
 	if err != nil {
-		panic(err)
+		panic(errors.WithStack(err))
 	}
 
 	conn, err := database.ConnectToDB()
 	if err != nil {
-		panic(err)
+		panic(errors.WithStack(err))
 	}
 	defer conn.Close()
 
 	file, err := os.OpenFile(fmt.Sprintf("./storage/logs/%s.log", time.Now().Format("2006-01-02")), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		log.Fatalf("error opening file: %v", err)
+		log.Fatalf("error opening file: %v", errors.WithStack(err))
 	}
 
 	defer file.Close()

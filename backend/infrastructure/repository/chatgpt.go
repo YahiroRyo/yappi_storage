@@ -2,8 +2,9 @@ package repository
 
 import (
 	"context"
-	"errors"
 	"os"
+
+	"github.com/cockroachdb/errors"
 
 	"github.com/YahiroRyo/yappi_storage/backend/domain/vector"
 
@@ -28,7 +29,7 @@ func (chatGPTRepo *ChatGPTRepository) GetEmbedding(contents string) (*vector.Vec
 	res, err := client.CreateEmbeddings(context.Background(), queryReq)
 
 	if err != nil {
-		return nil, errors.Join(FieldFetchAPIError{Code: 500, Message: "エラーが発生しました。"}, err)
+		return nil, errors.WithStack(errors.Join(FieldFetchAPIError{Code: 500, Message: "エラーが発生しました。"}, err))
 	}
 
 	var vector vector.Vector

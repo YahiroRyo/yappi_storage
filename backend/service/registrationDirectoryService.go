@@ -3,6 +3,8 @@ package service
 import (
 	"time"
 
+	"github.com/cockroachdb/errors"
+
 	"github.com/YahiroRyo/yappi_storage/backend/domain/file"
 	"github.com/YahiroRyo/yappi_storage/backend/domain/user"
 	"github.com/YahiroRyo/yappi_storage/backend/helper"
@@ -20,13 +22,13 @@ type RegistrationDirectoryService struct {
 func (service *RegistrationDirectoryService) Execute(user user.User, name string, parentDirectoryID *string) (*file.File, error) {
 	tx, err := service.Conn.Beginx()
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	generatedID, err := helper.GenerateSnowflake()
 	if err != nil {
 		tx.Rollback()
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	file := file.File{
@@ -44,10 +46,12 @@ func (service *RegistrationDirectoryService) Execute(user user.User, name string
 	uploadedFile, err := service.FileRepo.RegistrationFile(tx, user, file)
 	if err != nil {
 		tx.Rollback()
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
-	tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return nil, errors.WithStack(err)
+	}
 
 	return uploadedFile, nil
 }

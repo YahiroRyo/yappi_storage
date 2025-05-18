@@ -1,11 +1,12 @@
 package validate
 
 import (
-	"errors"
 	"reflect"
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/cockroachdb/errors"
 )
 
 type ValidationError struct {

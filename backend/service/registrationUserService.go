@@ -1,7 +1,7 @@
 package service
 
 import (
-	"errors"
+	"github.com/cockroachdb/errors"
 
 	"github.com/YahiroRyo/yappi_storage/backend/helper"
 	"github.com/YahiroRyo/yappi_storage/backend/infrastructure/repository"

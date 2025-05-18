@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"errors"
+	"github.com/cockroachdb/errors"
 
 	"github.com/YahiroRyo/yappi_storage/backend/domain/user"
 	"github.com/YahiroRyo/yappi_storage/backend/helper"
@@ -25,13 +25,13 @@ type UserRepository struct {
 func (repo *UserRepository) GetLoggedInUser(conn *sqlx.DB, sess *session.Session) (*user.User, error) {
 	row := conn.QueryRowx("SELECT * FROM users WHERE session_id = $1", sess.Get("id"))
 	if row == nil {
-		return nil, errors.Join(NotFoundError{Code: 404, Message: "データが存在しません。"}, row.Err())
+		return nil, errors.WithStack(errors.Join(NotFoundError{Code: 404, Message: "データが存在しません。"}, row.Err()))
 	}
 
 	var result database.User
 	err := row.StructScan(&result)
 	if err != nil {
-		return nil, errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, row.Err())
+		return nil, errors.WithStack(errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, row.Err()))
 	}
 
 	user := result.ToEntity()
@@ -42,13 +42,13 @@ func (repo *UserRepository) GetLoggedInUser(conn *sqlx.DB, sess *session.Session
 func (repo *UserRepository) GetUserByToken(conn *sqlx.DB, token string) (*user.User, error) {
 	row := conn.QueryRowx("SELECT * FROM users WHERE token = $1", token)
 	if row == nil {
-		return nil, errors.Join(NotFoundError{Code: 404, Message: "データが存在しません。"}, row.Err())
+		return nil, errors.WithStack(errors.Join(NotFoundError{Code: 404, Message: "データが存在しません。"}, row.Err()))
 	}
 
 	var result database.User
 	err := row.StructScan(&result)
 	if err != nil {
-		return nil, errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, row.Err())
+		return nil, errors.WithStack(errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, row.Err()))
 	}
 
 	user := result.ToEntity()
@@ -59,23 +59,23 @@ func (repo *UserRepository) GetUserByToken(conn *sqlx.DB, token string) (*user.U
 func (repo *UserRepository) Login(tx *sqlx.Tx, email string, password string, sessionId string) (*user.User, error) {
 	row := tx.QueryRowx("SELECT * FROM users WHERE email = $1", email)
 	if row == nil {
-		return nil, errors.Join(NotFoundError{Code: 404, Message: "メールアドレスが存在しません。"}, row.Err())
+		return nil, errors.WithStack(errors.Join(NotFoundError{Code: 404, Message: "メールアドレスが存在しません。"}, row.Err()))
 	}
 
 	var result database.User
 	err := row.StructScan(&result)
 	if err != nil {
 		println(err.Error())
-		return nil, errors.Join(NotFoundError{Code: 404, Message: "スキャンに失敗しました。"}, row.Err())
+		return nil, errors.WithStack(errors.Join(NotFoundError{Code: 404, Message: "スキャンに失敗しました。"}, row.Err()))
 	}
 
 	if err := helper.CompareHashPassword(result.Password, password); err != nil {
-		return nil, errors.Join(NotFoundError{Code: 404, Message: "パスワードが違います。"}, row.Err())
+		return nil, errors.WithStack(errors.Join(NotFoundError{Code: 404, Message: "パスワードが違います。"}, row.Err()))
 	}
 
 	_, err = tx.Exec("UPDATE users SET session_id = $1 WHERE id = $2", sessionId, result.ID)
 	if err != nil {
-		return nil, errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, row.Err())
+		return nil, errors.WithStack(errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, row.Err()))
 	}
 
 	user := result.ToEntity()
@@ -86,12 +86,12 @@ func (repo *UserRepository) Login(tx *sqlx.Tx, email string, password string, se
 func (repo *UserRepository) Registration(tx *sqlx.Tx, email string, password string, icon string) error {
 	id, err := helper.GenerateSnowflake()
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	_, err = tx.Exec("INSERT INTO users (id, email, password, icon) VALUES ($1, $2, $3, $4)", id, email, password, icon)
 	if err != nil {
-		return errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err)
+		return errors.WithStack(errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err))
 	}
 
 	return nil
@@ -100,7 +100,7 @@ func (repo *UserRepository) Registration(tx *sqlx.Tx, email string, password str
 func (repo *UserRepository) Logout(tx *sqlx.Tx, user user.User) error {
 	_, err := tx.Exec("UPDATE users SET session_id = NULL")
 	if err != nil {
-		return errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err)
+		return errors.WithStack(errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err))
 	}
 
 	return nil
@@ -109,7 +109,7 @@ func (repo *UserRepository) Logout(tx *sqlx.Tx, user user.User) error {
 func (repo *UserRepository) GenerateToken(tx *sqlx.Tx, user user.User) (*string, error) {
 	token, err := helper.GenerateSnowflake()
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	args := map[string]any{
@@ -119,7 +119,7 @@ func (repo *UserRepository) GenerateToken(tx *sqlx.Tx, user user.User) (*string,
 
 	_, err = tx.NamedExec("UPDATE users SET token = :token WHERE id = :user_id", args)
 	if err != nil {
-		return nil, errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err)
+		return nil, errors.WithStack(errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err))
 	}
 
 	return token, nil

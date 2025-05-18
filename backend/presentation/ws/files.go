@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/YahiroRyo/yappi_storage/backend/helper"
+	"github.com/cockroachdb/errors"
 	"github.com/gofiber/contrib/websocket"
 )
 
@@ -34,7 +35,7 @@ func (wsc *WsController) UploadFile(c *websocket.Conn) {
 
 	for {
 		if messageType, message, err = c.ReadMessage(); err != nil {
-			log.Println("read:", err)
+			log.Println("read:", errors.WithStack(err))
 			break
 		}
 
@@ -48,20 +49,20 @@ func (wsc *WsController) UploadFile(c *websocket.Conn) {
 			content := parts[1]
 
 			if err != nil {
-				log.Println("strconv atoi:", err)
+				log.Println("strconv atoi:", errors.WithStack(err))
 				break
 			}
 
 			if messageCommand == InitializeFileName {
 				storeStoragePath, err := wsc.GetStoreStoragePathService.Execute()
 				if err != nil {
-					log.Println("GetStorageSettingService:", err)
+					log.Println("GetStorageSettingService:", errors.WithStack(err))
 					break
 				}
 
 				id, err := helper.GenerateSnowflake()
 				if err != nil {
-					log.Println("snowflake:", err)
+					log.Println("snowflake:", errors.WithStack(err))
 					break
 				}
 				filename = fmt.Sprintf("%s%s", *id, filepath.Ext(string(content)))
@@ -70,7 +71,7 @@ func (wsc *WsController) UploadFile(c *websocket.Conn) {
 
 			if messageCommand == FinishedUpload {
 				if err = c.WriteMessage(websocket.TextMessage, []byte(*url)); err != nil {
-					log.Println("write:", err)
+					log.Println("write:", errors.WithStack(err))
 					break
 				}
 			}
@@ -79,7 +80,7 @@ func (wsc *WsController) UploadFile(c *websocket.Conn) {
 
 		url, err = wsc.UploadFileChunkService.Execute(message, dirname)
 		if err != nil {
-			log.Println("UploadFileChunkService:", err)
+			log.Println("UploadFileChunkService:", errors.WithStack(err))
 			break
 		}
 	}

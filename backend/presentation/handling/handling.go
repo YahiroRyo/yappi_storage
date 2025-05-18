@@ -1,8 +1,9 @@
 package handling
 
 import (
-	"errors"
 	"fmt"
+
+	"github.com/cockroachdb/errors"
 
 	"github.com/YahiroRyo/yappi_storage/backend/helper/validate"
 	"github.com/YahiroRyo/yappi_storage/backend/infrastructure/repository"
