@@ -29,6 +29,9 @@ import (
 
 func diController(conn *sqlx.DB, userRepo repository.UserRepository, fileRepo repository.FileRepository, chatGPTRepo repository.ChatGPTRepository) controller.Controller {
 	return controller.Controller{
+		DeleteCacheService: service.DeleteCacheService{
+			FileRepo: &fileRepo,
+		},
 		GetFilesService: service.GetFilesService{
 			Conn:     conn,
 			FileRepo: &fileRepo,

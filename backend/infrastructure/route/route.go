@@ -22,6 +22,7 @@ func SetRoutes(app *fiber.App, controller controller.Controller, api api.Api, ws
 		files.Put("/move", controller.MoveFiles)
 		files.Put("/rename", controller.RenameFile)
 		files.Delete("/", controller.DeleteFiles)
+		files.Delete("/delete-cache", controller.DeleteCache)
 		files.Get("/file/:file_id", controller.GetFile)
 	}
 

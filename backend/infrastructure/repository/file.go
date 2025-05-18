@@ -1,9 +1,12 @@
 package repository
 
 import (
+	"context"
 	"fmt"
 	"log"
+	"math"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/cockroachdb/errors"
@@ -19,6 +22,7 @@ import (
 )
 
 type FileRepositoryInterface interface {
+	DeleteCache(userID string) error
 	GetFiles(db *sqlx.DB, user user.User, parentDirectoryId *string, currentPageCount int, pageSize int) (*file.Files, error)
 	GetFileByID(db *sqlx.DB, user user.User, id string) (*file.File, error)
 	SearchFiles(
@@ -78,10 +82,25 @@ func init() {
 
 		if _, err := os.Stat(linkPath); os.IsNotExist(err) {
 			if err := os.Symlink(fmt.Sprintf("./storage/files/%s", dirname), linkPath); err != nil {
-				log.Fatalf("error creating symlink: %v", errors.WithStack(err))
+				log.Print(errors.WithStack(err))
 			}
 		}
 	}
+}
+
+func (repo *FileRepository) DeleteCache(userID string) error {
+	keys, err := repo.Redis.Keys(context.Background(), fmt.Sprintf("files:%s:*", userID)).Result()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	for _, key := range keys {
+		if err := repo.Redis.Del(context.Background(), key).Err(); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+
+	return nil
 }
 
 func (repo *FileRepository) GetFiles(db *sqlx.DB, user user.User, parentDirectoryId *string, currentPageCount int, pageSize int) (*file.Files, error) {
@@ -93,21 +112,21 @@ func (repo *FileRepository) GetFiles(db *sqlx.DB, user user.User, parentDirector
 		Value: &files,
 		Do: func(c *cache.Item) (interface{}, error) {
 			args := map[string]interface{}{
-				"user_id":  user.ID,
-				"pageSize": pageSize,
-				"offset":   pageSize * currentPageCount,
+				"user_id":   user.ID,
+				"page_size": pageSize,
+				"offset":    pageSize * currentPageCount,
 			}
 
 			q := `SELECT * FROM files WHERE user_id = :user_id `
 
-			if *parentDirectoryId == "" {
+			if parentDirectoryId == nil || *parentDirectoryId == "" {
 				q += `AND parent_directory_id IS NULL `
 			} else {
 				q += `AND parent_directory_id = :parent_directory_id `
 				args["parent_directory_id"] = parentDirectoryId
 			}
 
-			q += `LIMIT :pageSize OFFSET :offset`
+			q += `LIMIT :page_size OFFSET :offset`
 
 			rows, err := db.NamedQuery(q, args)
 			if err != nil {
@@ -261,14 +280,20 @@ func (repo *FileRepository) RegistrationFile(tx *sqlx.Tx, user user.User, file f
 }
 
 func (repo *FileRepository) UploadFileChunk(file []byte, dirname string) (*string, error) {
-	id := fmt.Sprintf("%d", time.Now().UnixNano())
-	path := fmt.Sprintf("./storage/files/%s/%s", dirname, id)
-
-	if err := os.WriteFile(path, file, 0644); err != nil {
-		return nil, errors.WithStack(errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err))
+	f, err := os.OpenFile(fmt.Sprintf("storage/files/%s", dirname), os.O_CREATE|os.O_RDWR|os.O_APPEND, 0666)
+	if err != nil {
+		return nil, err
 	}
 
-	return &id, nil
+	url := fmt.Sprintf("%s/storage/files/%s", os.Getenv("BASE_URL"), dirname)
+
+	defer f.Close()
+
+	if _, err := f.Write(file); err != nil {
+		return &url, err
+	}
+
+	return &url, nil
 }
 
 func (repo *FileRepository) UpdateFile(tx *sqlx.Tx, user user.User, file file.File) (*file.File, error) {
@@ -321,5 +346,35 @@ func (repo *FileRepository) GetStorageSetting() ([]string, error) {
 }
 
 func (repo *FileRepository) GetStoreStoragePath() (string, error) {
-	return "./storage/files", nil
+	result := struct {
+		Path string
+		Size int64
+	}{
+		Path: "",
+		Size: int64(math.MaxInt64),
+	}
+
+	for _, storePath := range storePaths {
+		var dirSize int64
+		err := filepath.Walk(fmt.Sprintf("storage/files/%s", storePath), func(_ string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if !info.IsDir() {
+				dirSize += info.Size()
+			}
+			return nil
+		})
+		if err != nil {
+			return "", err
+		}
+
+		fmt.Println(storePath, dirSize, result.Size)
+		if result.Size > dirSize {
+			result.Path = storePath
+			result.Size = dirSize
+		}
+	}
+
+	return result.Path, nil
 }

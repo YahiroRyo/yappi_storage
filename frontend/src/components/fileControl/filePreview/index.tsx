@@ -70,12 +70,7 @@ export const FilePreview = ({ file, onClose }: FilePreviewProps) => {
             </Button>
             <div className={styles.filePreview__image}>
               {file.url && (
-                <Image
-                  src={file.url}
-                  alt={file.name}
-                  fill
-                  style={{ objectFit: 'contain' }}
-                />
+                <img className={styles.filePreview__image} src={file.url} />
               )}
             </div>
           </GridVerticalRow>

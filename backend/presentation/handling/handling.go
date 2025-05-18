@@ -1,7 +1,7 @@
 package handling
 
 import (
-	"fmt"
+	"log"
 
 	"github.com/cockroachdb/errors"
 
@@ -53,7 +53,11 @@ func basicErrorHandler(ctx *fiber.Ctx, err error) bool {
 
 func ErrorHandler(ctx *fiber.Ctx, err error) error {
 	code := fiber.StatusInternalServerError
-	fmt.Printf("%v", err)
+
+	var notLoggedInError middleware.NotLoggedInError
+	if !errors.As(err, &notLoggedInError) {
+		log.Printf("%+v\n", err)
+	}
 
 	ctx.Set(fiber.HeaderContentType, fiber.MIMETextPlainCharsetUTF8)
 

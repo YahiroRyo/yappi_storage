@@ -28,6 +28,9 @@ import { UploadFileModal } from "@/components/fileControl/uploadFileModal";
 import { RenameFileModal } from "@/components/fileControl/renameFileModal";
 import { FilePreview } from "@/components/fileControl/filePreview";
 import { MoveFileModal } from "@/components/fileControl/moveFileModal";
+import { ReloadIcon } from "@/components/icons/reloadIcon";
+import { GridHorizonRow } from "@/components/ui/grid/gridHorizonRow";
+import { deleteCache } from "@/api/files/deleteCache";
 
 export default function Directory() {
   const { ids } = useParams();
@@ -59,12 +62,15 @@ export default function Directory() {
   }, [ids]);
 
   const processedParentDirectoryId = useMemo(() => {
-    let result = pathname;
-    if (fileId) {
-      result = result.replace("/" + fileId, "");
+    let parentDirectoryIdForFetch: string | undefined = undefined;
+    if (ids && ids.length) {
+      const parentDirectoryId = ids[0];
+      if (parentDirectoryId !== "root") {
+        parentDirectoryIdForFetch = parentDirectoryId;
+      }
     }
-    return result;
-  }, [fileId, pathname]);
+    return parentDirectoryIdForFetch;
+  }, [ids]);
 
   const exceptFileIdPathname = useMemo(() => {
     let result = pathname;
@@ -101,9 +107,24 @@ export default function Directory() {
   return (
     <Container margin="1rem">
       <GridVerticalRow gap=".5rem">
-        <Text size="pixcel" pixcel="3rem">
-          マイドライブ
-        </Text>
+        <GridHorizonRow gap="1rem" gridTemplateColumns="1.5rem 1fr">
+          <span 
+            onClick={() => {
+              (async () => {
+                const res = await deleteCache();
+                if (res.status === 401) {
+                  redirect("/login");
+                }
+                setRefreshFiles(prev => !prev);
+              })();
+            }}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", cursor :'pointer'}}>
+              <ReloadIcon width="1.5rem" height="1.5rem" />
+          </span>
+          <Text size="pixcel" pixcel="3rem">
+            マイドライブ
+          </Text>
+        </GridHorizonRow>
 
         <div style={{ display: "flex", gap: "1rem" }}>
           <Button
@@ -265,20 +286,21 @@ export default function Directory() {
 
               let parentDirectoryId = "root";
               if (processedParentDirectoryId) {
-                parentDirectoryId = processedParentDirectoryId.toString();
+                parentDirectoryId = processedParentDirectoryId;
               }
               return `/drive/${parentDirectoryId}/${file.id}`;
             }}
             onDoubleClick={(file) => {
               if (file.kind === "Directory") {
                 router.push(`/drive/${file.id}`);
-              } else {
-                let parentDirectoryId = "root";
-                if (processedParentDirectoryId) {
-                  parentDirectoryId = processedParentDirectoryId.toString();
-                }
-                router.push(`/drive/${parentDirectoryId}/${file.id}`);
+                return;
               }
+
+              let parentDirectoryId = "root";
+              if (processedParentDirectoryId) {
+                parentDirectoryId = processedParentDirectoryId;
+              }
+              router.push(`/drive/${parentDirectoryId}/${file.id}`);
             }}
           />
         ) : (

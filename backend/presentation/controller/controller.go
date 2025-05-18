@@ -3,6 +3,7 @@ package controller
 import "github.com/YahiroRyo/yappi_storage/backend/service"
 
 type Controller struct {
+	DeleteCacheService           service.DeleteCacheService
 	GetFilesService              service.GetFilesService
 	GetFileService               service.GetFileService
 	SearchFilesService           service.SearchFilesService

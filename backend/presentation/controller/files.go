@@ -8,6 +8,20 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+func (controller *Controller) DeleteCache(ctx *fiber.Ctx) error {
+	sess, err := session.GetSession(ctx)
+	if err != nil {
+		return err
+	}
+
+	user, err := controller.GetLoggedInUserService.Execute(sess)
+	if err := controller.DeleteCacheService.Execute(user.ID); err != nil {
+		return err
+	}
+
+	return ctx.Status(200).JSON(nil)
+}
+
 func (controller *Controller) GetFiles(ctx *fiber.Ctx) error {
 	req := request.GetFilesRequest{}
 

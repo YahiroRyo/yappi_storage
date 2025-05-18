@@ -71,10 +71,14 @@ export const SelectableTable = <T extends RowData>({
     if (selectedData.length === 1 && onSelected) {
       onSelected(selectedData[0]);
     }
-    if (onMultipleSelected) {
+  }, [rowData]);
+
+  useEffect(() => {
+    const selectedData = getSelectedData();
+    if (onMultipleSelected && selectedData.length > 0) {
       onMultipleSelected(selectedData);
     }
-  }, [rowData, getSelectedData, onSelected, onMultipleSelected]);
+  }, [rowData]);
 
   useEffect(() => {
     setRowData(
