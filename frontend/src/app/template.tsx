@@ -7,7 +7,7 @@ import { GridHorizonRow } from "@/components/ui/grid/gridHorizonRow";
 import { GridVerticalRow } from "@/components/ui/grid/gridVerticalRow";
 import { Text } from "@/components/ui/text";
 import { getLoggedInUser, Response } from "@/api/users/getLoggedInUser";
-import { Suspense, use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function RootTemplate({
   children,
