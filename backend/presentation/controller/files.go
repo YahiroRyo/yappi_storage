@@ -49,11 +49,7 @@ func (controller *Controller) GetFiles(ctx *fiber.Ctx) error {
 			return err
 		}
 
-		ctx.JSON(response.GetFilesResponse{
-			PageSize:         req.PageSize,
-			CurrentPageCount: req.CurrentPageCount,
-			Files:            *files,
-		})
+		ctx.JSON(*files)
 
 		return nil
 	}

@@ -15,3 +15,10 @@ type File struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
+
+type PaginationFiles struct {
+	Files            []File `json:"files"`
+	PageSize         int    `json:"page_size"`
+	CurrentPageCount int    `json:"current_page_count"`
+	Total            int    `json:"total"`
+}

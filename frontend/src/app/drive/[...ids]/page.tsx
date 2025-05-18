@@ -31,6 +31,9 @@ import { MoveFileModal } from "@/components/fileControl/moveFileModal";
 import { ReloadIcon } from "@/components/icons/reloadIcon";
 import { GridHorizonRow } from "@/components/ui/grid/gridHorizonRow";
 import { deleteCache } from "@/api/files/deleteCache";
+import { downloadMultipleFiles } from "@/helpers/fileDownload";
+
+const ITEMS_PER_PAGE = 30;
 
 export default function Directory() {
   const { ids } = useParams();
@@ -53,6 +56,8 @@ export default function Directory() {
   const [selectingFile, setSelectingFile] = useState<File>();
   const [selectingFiles, setSelectingFiles] = useState<File[]>([]);
   const [isLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   const fileId = useMemo(() => {
     if (ids && ids.length > 1) {
@@ -82,13 +87,14 @@ export default function Directory() {
 
   useEffect(() => {
     (async () => {
-      const res = await getFiles(30, 0, undefined, processedParentDirectoryId);
+      const res = await getFiles(ITEMS_PER_PAGE, currentPage - 1, undefined, processedParentDirectoryId);
 
       if (res.status === 401) {
         redirect("/login");
       }
 
       setGetFilesRes(res.successedResponse!);
+      setTotalPages(Math.max(1, Math.ceil(res.successedResponse!.total / ITEMS_PER_PAGE)));
     })();
 
     if (fileId) {
@@ -102,7 +108,7 @@ export default function Directory() {
         setGetFileRes(res.successedResponse);
       })();
     }
-  }, [refreshFiles, processedParentDirectoryId, fileId]);
+  }, [refreshFiles, processedParentDirectoryId, fileId, currentPage]);
 
   return (
     <Container margin="1rem">
@@ -161,6 +167,28 @@ export default function Directory() {
                 border={`1px solid ${uiConfig.color.on.main}`}
                 padding=".5rem 1rem"
                 radius="32px"
+                onClick={async () => {
+                  await downloadMultipleFiles(selectingFiles);
+                }}
+                textAlign="center"
+              >
+                <Text
+                  size="small"
+                  fontWeight={700}
+                  color={uiConfig.color.text.secondary.container}
+                >
+                  {selectingFiles.length}件のファイルをダウンロード
+                </Text>
+              </Button>
+              <Button
+                color={{
+                  backgroundColor: uiConfig.color.surface.main,
+                  hoverBackgroundColor: uiConfig.color.bg.secondary.container,
+                  textColor: uiConfig.color.text.main,
+                }}
+                border={`1px solid ${uiConfig.color.on.main}`}
+                padding=".5rem 1rem"
+                radius="32px"
                 onClick={() => {
                   setIsOpendedMoveFileModal(true);
                 }}
@@ -202,107 +230,148 @@ export default function Directory() {
         </div>
 
         {getFilesRes ? (
-          <SelectableTable
-            headers={{
-              id: "ID",
-              user_id: "ユーザー名",
-              parent_directory_id: "親ディレクトリID",
-              embedding: "ベクトル",
-              kind: "種類",
-              url: "URL",
-              name: "名前",
-              created_at: "作成日時",
-              updated_at: "更新日時",
-            }}
-            hiddenHeaders={[
-              "id",
-              "user_id",
-              "parent_directory_id",
-              "embedding",
-              "url",
-              "updated_at",
-            ]}
-            data={getFilesRes.files}
-            showColumn={(row, key) => {
-              if (key === "kind") {
-                return (
-                  <FileIconKind
-                    style={{ margin: "auto 0", display: "block" }}
-                    kind={row[key]}
-                  />
-                );
+          <>
+            <SelectableTable
+              headers={{
+                id: "ID",
+                user_id: "ユーザー名",
+                parent_directory_id: "親ディレクトリID",
+                embedding: "ベクトル",
+                kind: "種類",
+                url: "URL",
+                name: "名前",
+                created_at: "作成日時",
+                updated_at: "更新日時",
+              }}
+              hiddenHeaders={[
+                "id",
+                "user_id",
+                "parent_directory_id",
+                "embedding",
+                "url",
+                "updated_at",
+              ]}
+              data={getFilesRes.files}
+              showColumn={(row, key) => {
+                if (key === "kind") {
+                  return (
+                    <FileIconKind
+                      style={{ margin: "auto 0", display: "block" }}
+                      kind={row[key]}
+                    />
+                  );
+                }
+                return (row as any)[key];
+              }}
+              isFixedHead={false}
+              selectedRowBackgroundColor={uiConfig.color.bg.secondary.container}
+              onSelected={(file) => {
+                setSelectingFile(file);
+              }}
+              onMultipleSelected={(files) => {
+                setSelectingFiles(files);
+                if (files.length === 1) {
+                  setSelectingFile(files[0]);
+                }
+              }}
+              multipleSelectable={true}
+              selectedChildren={
+                <GridVerticalRow gap=".5rem">
+                  <Button
+                    padding="0.5rem 1rem"
+                    color={{ hoverBackgroundColor: uiConfig.color.surface.high }}
+                    onClick={() => {
+                      setIsOpendedRenameModal(true);
+                    }}
+                  >
+                    名前変更
+                  </Button>
+                  <Border color={uiConfig.color.surface.high} />
+                  <Button
+                    padding="0.5rem 1rem"
+                    color={{ hoverBackgroundColor: uiConfig.color.surface.high }}
+                    onClick={() => {
+                      setIsOpendedMoveFileModal(true);
+                    }}
+                  >
+                    移動
+                  </Button>
+                  <Border color={uiConfig.color.surface.high} />
+                  <Button
+                    padding="0.5rem 1rem"
+                    color={{ hoverBackgroundColor: uiConfig.color.surface.high }}
+                    onClick={() => {
+                      setIsOpendedDeleteFileModal(true);
+                    }}
+                  >
+                    削除
+                  </Button>
+                </GridVerticalRow>
               }
-              return (row as any)[key];
-            }}
-            isFixedHead={false}
-            selectedRowBackgroundColor={uiConfig.color.bg.secondary.container}
-            onSelected={(file) => {
-              setSelectingFile(file);
-            }}
-            onMultipleSelected={(files) => {
-              setSelectingFiles(files);
-              if (files.length === 1) {
-                setSelectingFile(files[0]);
-              }
-            }}
-            multipleSelectable={true}
-            selectedChildren={
-              <GridVerticalRow gap=".5rem">
-                <Button
-                  padding="0.5rem 1rem"
-                  color={{ hoverBackgroundColor: uiConfig.color.surface.high }}
-                  onClick={() => {
-                    setIsOpendedRenameModal(true);
-                  }}
-                >
-                  名前変更
-                </Button>
-                <Border color={uiConfig.color.surface.high} />
-                <Button
-                  padding="0.5rem 1rem"
-                  color={{ hoverBackgroundColor: uiConfig.color.surface.high }}
-                  onClick={() => {
-                    setIsOpendedMoveFileModal(true);
-                  }}
-                >
-                  移動
-                </Button>
-                <Border color={uiConfig.color.surface.high} />
-                <Button
-                  padding="0.5rem 1rem"
-                  color={{ hoverBackgroundColor: uiConfig.color.surface.high }}
-                  onClick={() => {
-                    setIsOpendedDeleteFileModal(true);
-                  }}
-                >
-                  削除
-                </Button>
-              </GridVerticalRow>
-            }
-            href={(file) => {
-              if (file.kind === "Directory") {
-                return `/drive/${file.id}`;
-              }
+              href={(file) => {
+                if (file.kind === "Directory") {
+                  return `/drive/${file.id}`;
+                }
 
-              let parentDirectoryId = "root";
-              if (processedParentDirectoryId) {
-                parentDirectoryId = processedParentDirectoryId;
-              }
-              return `/drive/${parentDirectoryId}/${file.id}`;
-            }}
-            onDoubleClick={(file) => {
-              if (file.kind === "Directory") {
-                router.push(`/drive/${file.id}`);
-                return;
-              }
+                let parentDirectoryId = "root";
+                if (processedParentDirectoryId) {
+                  parentDirectoryId = processedParentDirectoryId;
+                }
+                return `/drive/${parentDirectoryId}/${file.id}`;
+              }}
+              onDoubleClick={(file) => {
+                if (file.kind === "Directory") {
+                  router.push(`/drive/${file.id}`);
+                  return;
+                }
 
-              let parentDirectoryId = "root";
-              if (processedParentDirectoryId) {
-                parentDirectoryId = processedParentDirectoryId;
-              }
-              router.push(`/drive/${parentDirectoryId}/${file.id}`);
-            }}
-          />
+                let parentDirectoryId = "root";
+                if (processedParentDirectoryId) {
+                  parentDirectoryId = processedParentDirectoryId;
+                }
+                router.push(`/drive/${parentDirectoryId}/${file.id}`);
+              }}
+            />
+            <Container margin="1rem 0">
+              <GridHorizonRow gap="1rem" gridTemplateColumns="1fr 1fr 1fr">
+                <Button
+                  color={{
+                    backgroundColor: uiConfig.color.surface.main,
+                    hoverBackgroundColor: uiConfig.color.bg.secondary.container,
+                    textColor: uiConfig.color.text.main,
+                  }}
+                  border={`1px solid ${uiConfig.color.on.main}`}
+                  padding=".5rem 1rem"
+                  radius="32px"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <Text size="small" fontWeight={700}>
+                    前へ
+                  </Text>
+                </Button>
+                <Text align="center" size="small">
+                  {currentPage} / {totalPages}
+                </Text>
+                <Button
+                  color={{
+                    backgroundColor: uiConfig.color.surface.main,
+                    hoverBackgroundColor: uiConfig.color.bg.secondary.container,
+                    textColor: uiConfig.color.text.main,
+                  }}
+                  border={`1px solid ${uiConfig.color.on.main}`}
+                  padding=".5rem 1rem"
+                  radius="32px"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  <Text size="small" fontWeight={700}>
+                    次へ
+                  </Text>
+                </Button>
+              </GridHorizonRow>
+            </Container>
+          </>
         ) : (
           <></>
         )}

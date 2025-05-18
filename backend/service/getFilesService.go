@@ -13,6 +13,6 @@ type GetFilesService struct {
 	FileRepo repository.FileRepositoryInterface
 }
 
-func (service *GetFilesService) Execute(user user.User, parentDirectoryId *string, currentPageCount int, pageSize int) (*file.Files, error) {
+func (service *GetFilesService) Execute(user user.User, parentDirectoryId *string, currentPageCount int, pageSize int) (*file.PaginationFiles, error) {
 	return service.FileRepo.GetFiles(service.Conn, user, parentDirectoryId, currentPageCount, pageSize)
 }

@@ -10,9 +10,9 @@ import { uiConfig } from "@/components/ui/uiConfig";
 import { GridHorizonRow } from "@/components/ui/grid/gridHorizonRow";
 import { Document, Page } from 'react-pdf';
 import { useState } from "react";
-import Image from 'next/image';
 import 'react-pdf/dist/esm/Page/TextLayer.css'
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css'
+import { downloadFile } from "@/helpers/fileDownload";
 
 type FilePreviewProps = {
   file?: GetFileSuccessedResponse;
@@ -53,10 +53,7 @@ export const FilePreview = ({ file, onClose }: FilePreviewProps) => {
               padding=".5rem 1rem"
               radius="32px"
               onClick={() => {
-                const link = document.createElement("a");
-                link.href = file.url!;
-                link.download = file.name;
-                link.click();
+                downloadFile(file);
               }}
               textAlign="center"
             >
@@ -102,10 +99,7 @@ export const FilePreview = ({ file, onClose }: FilePreviewProps) => {
               padding=".5rem 1rem"
               radius="32px"
               onClick={() => {
-                const link = document.createElement("a");
-                link.href = file.url!;
-                link.download = file.name;
-                link.click();
+                downloadFile(file);
               }}
               textAlign="center"
             >
@@ -147,10 +141,7 @@ export const FilePreview = ({ file, onClose }: FilePreviewProps) => {
               padding=".5rem 1rem"
               radius="32px"
               onClick={() => {
-                const link = document.createElement("a");
-                link.href = file.url!;
-                link.download = file.name;
-                link.click();
+                downloadFile(file);
               }}
               textAlign="center"
             >
@@ -203,10 +194,7 @@ export const FilePreview = ({ file, onClose }: FilePreviewProps) => {
             padding=".5rem 1rem"
             radius="32px"
             onClick={() => {
-              const link = document.createElement("a");
-              link.href = file.url!;
-              link.download = file.name;
-              link.click();
+              downloadFile(file);
             }}
             textAlign="center"
           >

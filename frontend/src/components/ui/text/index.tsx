@@ -7,6 +7,7 @@ type Props =
       size: "pixcel";
       pixcel: string;
       fontWeight?: number;
+      align?: "left" | "center" | "right";
       children?: React.ReactNode;
       className?: string;
     }
@@ -15,6 +16,7 @@ type Props =
       size: "lerge" | "medium" | "small";
       pixcel?: undefined;
       fontWeight?: number;
+      align?: "left" | "center" | "right";
       children?: React.ReactNode;
       className?: string;
     };
@@ -26,11 +28,16 @@ export const Text = ({
   fontWeight,
   className,
   children,
+  align,
 }: Props) => {
   const style: CSSProperties = {};
 
   if (color) {
     style.color = color;
+  }
+
+  if (align) {
+    style.textAlign = align;
   }
 
   if (fontWeight) {

@@ -23,7 +23,7 @@ import (
 
 type FileRepositoryInterface interface {
 	DeleteCache(userID string) error
-	GetFiles(db *sqlx.DB, user user.User, parentDirectoryId *string, currentPageCount int, pageSize int) (*file.Files, error)
+	GetFiles(db *sqlx.DB, user user.User, parentDirectoryId *string, currentPageCount int, pageSize int) (*file.PaginationFiles, error)
 	GetFileByID(db *sqlx.DB, user user.User, id string) (*file.File, error)
 	SearchFiles(
 		db *sqlx.DB,
@@ -103,13 +103,13 @@ func (repo *FileRepository) DeleteCache(userID string) error {
 	return nil
 }
 
-func (repo *FileRepository) GetFiles(db *sqlx.DB, user user.User, parentDirectoryId *string, currentPageCount int, pageSize int) (*file.Files, error) {
-	var files file.Files
+func (repo *FileRepository) GetFiles(db *sqlx.DB, user user.User, parentDirectoryId *string, currentPageCount int, pageSize int) (*file.PaginationFiles, error) {
+	var pagenationFiles file.PaginationFiles
 
 	err := repo.Cache.Once(&cache.Item{
 		Key:   fmt.Sprintf("files:%s:%s:%d:%d", user.ID, *parentDirectoryId, currentPageCount, pageSize),
 		TTL:   time.Minute,
-		Value: &files,
+		Value: &pagenationFiles,
 		Do: func(c *cache.Item) (interface{}, error) {
 			args := map[string]interface{}{
 				"user_id":   user.ID,
@@ -117,16 +117,24 @@ func (repo *FileRepository) GetFiles(db *sqlx.DB, user user.User, parentDirector
 				"offset":    pageSize * currentPageCount,
 			}
 
-			q := `SELECT * FROM files WHERE user_id = :user_id `
+			createSql := func(selectColumns string, isGeneratePaginationSql bool) string {
+				q := fmt.Sprintf(`SELECT %s FROM files WHERE user_id = :user_id `, selectColumns)
 
-			if parentDirectoryId == nil || *parentDirectoryId == "" {
-				q += `AND parent_directory_id IS NULL `
-			} else {
-				q += `AND parent_directory_id = :parent_directory_id `
-				args["parent_directory_id"] = parentDirectoryId
+				if parentDirectoryId == nil || *parentDirectoryId == "" {
+					q += `AND parent_directory_id IS NULL `
+				} else {
+					q += `AND parent_directory_id = :parent_directory_id `
+					args["parent_directory_id"] = parentDirectoryId
+				}
+
+				if isGeneratePaginationSql {
+					q += `LIMIT :page_size OFFSET :offset`
+				}
+
+				return q
 			}
 
-			q += `LIMIT :page_size OFFSET :offset`
+			q := createSql("*", true)
 
 			rows, err := db.NamedQuery(q, args)
 			if err != nil {
@@ -145,7 +153,26 @@ func (repo *FileRepository) GetFiles(db *sqlx.DB, user user.User, parentDirector
 				files = append(files, e)
 			}
 
-			return &files, nil
+			q = createSql("COUNT(*) AS total", false)
+			rows, err = db.NamedQuery(q, args)
+			if err != nil {
+				return nil, errors.WithStack(errors.Join(FieldSQLError{Code: 500, Message: "エラーが発生しました。"}, err))
+			}
+
+			pageNation := struct {
+				Total int `db:"total"`
+			}{Total: 0}
+			rows.Next()
+			if err := rows.StructScan(&pageNation); err != nil {
+				return nil, errors.WithStack(errors.Join(FieldSQLError{Code: 500, Message: "スキャンエラー"}, err))
+			}
+
+			return &file.PaginationFiles{
+				Files:            files,
+				PageSize:         pageSize,
+				CurrentPageCount: currentPageCount,
+				Total:            pageNation.Total,
+			}, nil
 		},
 	})
 
@@ -153,7 +180,7 @@ func (repo *FileRepository) GetFiles(db *sqlx.DB, user user.User, parentDirector
 		return nil, errors.WithStack(err)
 	}
 
-	return &files, nil
+	return &pagenationFiles, nil
 }
 
 func (repo *FileRepository) GetFileByID(db *sqlx.DB, user user.User, id string) (*file.File, error) {

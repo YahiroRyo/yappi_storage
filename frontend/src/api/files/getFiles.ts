@@ -3,6 +3,7 @@ import { File } from "@/types/file";
 export type SuccessedResponse = {
   page_size: number;
   current_page_count: number;
+  total: number;
   files: File[];
 };
 
