@@ -1,9 +1,9 @@
 import type { NextConfig } from "next";
 
+/**
+ * @type {import('next').NextConfig}
+ */
 const nextConfig: NextConfig = {
-  rules: {
-    "@next/next/no-img-element": "off",
-  },
   rewrites: async () => {
     return {
       beforeFiles: [],

@@ -21,7 +21,7 @@ services:
       dockerfile: ./docker/backend.prod.Dockerfile
     volumes:
       - ./backend:/go/src/github.com/YahiroRyo/yappi_storage/backend
-      - ./storage:/~/storage
+      - ./storage:/storage
     tty: true
     command: /bin/sh -c "./run.sh"
     depends_on:

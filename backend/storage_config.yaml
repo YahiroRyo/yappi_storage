@@ -1,5 +1,5 @@
 mounts:
   - dirname: hdd1
-    path: ~/storage/hdd1
+    path: /storage/hdd1
   - dirname: hdd2
-    path: ~/storage/hdd2
+    path: /storage/hdd2
