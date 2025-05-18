@@ -1,5 +1,4 @@
-# syntax=docker.io/docker/dockerfile:1.7-labs
-FROM golang:1.24-alpine
+FROM golang:1.24
 
 WORKDIR /go/src/github.com/YahiroRyo/yappi_storage/backend
 
