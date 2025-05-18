@@ -38,11 +38,11 @@ func (service *RegistrationFilesService) Execute(user user.User, registrationFil
 			UserID:            user.ID,
 			ParentDirectoryID: registrationFile.ParentDirectoryId,
 			Url:               &registrationFile.Url,
-			Embedding:         nil,
-			Kind:              file.FileKindFromEnString(registrationFile.Kind).ToEnString(),
-			Name:              registrationFile.Name,
-			CreatedAt:         time.Now(),
-			UpdatedAt:         time.Now(),
+			// Embedding:         nil,
+			Kind:      file.FileKindFromEnString(registrationFile.Kind).ToEnString(),
+			Name:      registrationFile.Name,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
 		}
 
 		uploadedFile, err := service.FileRepo.RegistrationFile(tx, user, file)

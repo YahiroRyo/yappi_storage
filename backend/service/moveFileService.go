@@ -44,12 +44,12 @@ func (service *MoveFilesService) Execute(user user.User, fileIds []string, after
 				ID:                f.ID,
 				UserID:            f.UserID,
 				ParentDirectoryID: &afterParentDirectoryId,
-				Embedding:         f.Embedding,
-				Kind:              f.Kind,
-				Url:               f.Url,
-				Name:              f.Name,
-				CreatedAt:         f.CreatedAt,
-				UpdatedAt:         f.UpdatedAt,
+				// Embedding:         f.Embedding,
+				Kind:      f.Kind,
+				Url:       f.Url,
+				Name:      f.Name,
+				CreatedAt: f.CreatedAt,
+				UpdatedAt: f.UpdatedAt,
 			}
 
 			file, err := service.FileRepo.UpdateFile(tx, user, movedDirectoryFile)

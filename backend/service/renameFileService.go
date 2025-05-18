@@ -28,12 +28,12 @@ func (service *RenameFileService) Execute(user user.User, fileId string, name st
 		ID:                f.ID,
 		UserID:            f.UserID,
 		ParentDirectoryID: f.ParentDirectoryID,
-		Embedding:         f.Embedding,
-		Kind:              f.Kind,
-		Url:               f.Url,
-		Name:              name,
-		CreatedAt:         f.CreatedAt,
-		UpdatedAt:         f.UpdatedAt,
+		// Embedding:         f.Embedding,
+		Kind:      f.Kind,
+		Url:       f.Url,
+		Name:      name,
+		CreatedAt: f.CreatedAt,
+		UpdatedAt: f.UpdatedAt,
 	}
 
 	file, err := service.FileRepo.UpdateFile(tx, user, renameFile)

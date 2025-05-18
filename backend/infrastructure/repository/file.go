@@ -254,18 +254,16 @@ func (repo *FileRepository) RegistrationFile(tx *sqlx.Tx, user user.User, file f
 				id,
 				user_id,
 				parent_directory_id,
-				embedding,
 				kind,
 				url,
 				name,
 				created_at,
 				updated_at
 			)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
 		file.ID,
 		file.UserID,
 		file.ParentDirectoryID,
-		file.Embedding,
 		file.Kind,
 		file.Url,
 		file.Name,
@@ -301,16 +299,14 @@ func (repo *FileRepository) UpdateFile(tx *sqlx.Tx, user user.User, file file.Fi
 		UPDATE files
 		SET
 			parent_directory_id = $1,
-			embedding = $2,
-			kind = $3,
-			url = $4,
-			name = $5,
-			updated_at = $6
+			kind = $2,
+			url = $3,
+			name = $4,
+			updated_at = $5
 		WHERE
-			id = $7
-			AND user_id = $8`,
+			id = $6
+			AND user_id = $7`,
 		file.ParentDirectoryID,
-		file.Embedding,
 		file.Kind,
 		file.Url,
 		file.Name,

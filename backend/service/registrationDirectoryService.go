@@ -36,11 +36,11 @@ func (service *RegistrationDirectoryService) Execute(user user.User, name string
 		UserID:            user.ID,
 		ParentDirectoryID: parentDirectoryID,
 		Url:               nil,
-		Embedding:         nil,
-		Kind:              file.Directory.ToEnString(),
-		Name:              name,
-		CreatedAt:         time.Now(),
-		UpdatedAt:         time.Now(),
+		// Embedding:         nil,
+		Kind:      file.Directory.ToEnString(),
+		Name:      name,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	}
 
 	uploadedFile, err := service.FileRepo.RegistrationFile(tx, user, file)
