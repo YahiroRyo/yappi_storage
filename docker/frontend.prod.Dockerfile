@@ -9,7 +9,3 @@ RUN apt-get update && apt-get install -y \
    curl \
    protobuf-compiler \
    xdg-utils
-
-RUN npm install && npm run build
-
-CMD ["npm", "run", "start"]

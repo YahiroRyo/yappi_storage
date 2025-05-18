@@ -2,12 +2,13 @@ services:
   frontend:
     build:
       context: .
-      dockerfile: ./docker/frontend.Dockerfile
+      dockerfile: ./docker/frontend.prod.Dockerfile
     working_dir: /home/frontend
     volumes:
       - ./frontend:/home/frontend
     ports:
       - 127.0.0.1:3000:3000
+    command: []
     depends_on:
       - backend
     tty: true
@@ -17,14 +18,11 @@ services:
   backend:
     build:
       context: .
-      dockerfile: ./docker/backend.Dockerfile
+      dockerfile: ./docker/backend.prod.Dockerfile
     volumes:
       - ./backend:/go/src/github.com/YahiroRyo/yappi_storage/backend
       - ./storage:/~/storage
     tty: true
-    ports:
-      - 127.0.0.1:8000:8000
-      - 127.0.0.1:9000:9000
     depends_on:
       - postgres
       - redis
@@ -34,9 +32,7 @@ services:
   redis:
     build:
       context: .
-      dockerfile: ./docker/redis.Dockerfile
-    ports:
-      - 127.0.0.1:6379:6379
+      dockerfile: ./docker/redis.prod.Dockerfile
     volumes:
     - ./redis/data:/data
     command: ["redis-server"]
@@ -46,7 +42,7 @@ services:
   postgres:
     build: 
       context: .
-      dockerfile: ./docker/postgres.Dockerfile
+      dockerfile: ./docker/postgres.prod.Dockerfile
     volumes:
       - ./database/postgres:/var/lib/postgresql/data
       - ./database/logs:/var/log
