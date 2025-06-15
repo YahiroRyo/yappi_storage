@@ -3,86 +3,139 @@ package ws
 import (
 	"fmt"
 	"log"
-	"path/filepath"
-	"strconv"
-	"strings"
+	"time"
 
 	"github.com/YahiroRyo/yappi_storage/backend/helper"
-	"github.com/cockroachdb/errors"
-	"github.com/gofiber/contrib/websocket"
 )
 
-// type MessageCommand = int
+type UploadFileChunkData struct {
+	Checksum uint64
+	Chunk    []byte
+}
 
-const (
-	File = iota
-	InitializeFileName
-	FinishedUpload
-)
+type UploadSession struct {
+	FileName  string
+	Chunks    [][]byte
+	TotalSize int64
+	IsActive  bool
+	StartTime time.Time
+}
 
-func (wsc *WsController) UploadFile(c *websocket.Conn) {
-	var (
-		filename string
-		dirname  string
-		url      *string
-	)
+var uploadSessions = make(map[string]*UploadSession)
 
-	var (
-		messageType int
-		message     []byte
-		err         error
-	)
+func (wsc *WsController) initializeFileName(filename string) EventEnvelopeResponse {
+	log.Printf("Initializing file upload for: %s", filename)
 
-	for {
-		if messageType, message, err = c.ReadMessage(); err != nil {
-			log.Println("read:", errors.WithStack(err))
-			break
+	// 一意のセッションIDを生成
+	sessionID := fmt.Sprintf("%s_%d", filename, time.Now().UnixNano())
+	uploadSessions[sessionID] = &UploadSession{
+		FileName:  filename,
+		Chunks:    make([][]byte, 0),
+		TotalSize: 0,
+		IsActive:  true,
+		StartTime: time.Now(),
+	}
+
+	return EventEnvelopeResponse{
+		Event: EventEnvelopeEventInitializeFileName,
+		Data:  map[string]string{"session_id": sessionID, "status": "initialized"},
+	}
+}
+
+func (wsc *WsController) uploadFileChunk(data UploadFileChunkData) EventEnvelopeResponse {
+	log.Printf("Received file chunk with checksum: %d, size: %d bytes", data.Checksum, len(data.Chunk))
+
+	// CheckSumの検証
+	if !helper.CalculateChecksum(data.Chunk, data.Checksum) {
+		log.Printf("Checksum verification failed for chunk")
+		return EventEnvelopeResponse{
+			Event: EventEnvelopeEventUploadFileChunk,
+			Data:  map[string]string{"status": "error", "message": "checksum_mismatch"},
 		}
+	}
 
-		if len(message) == 0 {
-			continue
-		}
+	log.Printf("Checksum verification successful for chunk")
 
-		if messageType == websocket.TextMessage {
-			parts := strings.Split(string(message), ",")
-			messageCommand, err := strconv.Atoi(parts[0])
-			content := parts[1]
-
-			if err != nil {
-				log.Println("strconv atoi:", errors.WithStack(err))
-				break
-			}
-
-			if messageCommand == InitializeFileName {
-				storeStoragePath, err := wsc.GetStoreStoragePathService.Execute()
-				if err != nil {
-					log.Println("GetStorageSettingService:", errors.WithStack(err))
-					break
-				}
-
-				id, err := helper.GenerateSnowflake()
-				if err != nil {
-					log.Println("snowflake:", errors.WithStack(err))
-					break
-				}
-				filename = fmt.Sprintf("%s%s", *id, filepath.Ext(string(content)))
-				dirname = fmt.Sprintf("%s/%s", storeStoragePath, filename)
-			}
-
-			if messageCommand == FinishedUpload {
-				if err = c.WriteMessage(websocket.TextMessage, []byte(*url)); err != nil {
-					log.Println("write:", errors.WithStack(err))
-					break
-				}
-			}
-			continue
-		}
-
-		url, err = wsc.UploadFileChunkService.Execute(message, dirname)
-		if err != nil {
-			log.Println("UploadFileChunkService:", errors.WithStack(err))
+	// 現在のセッションを見つける（簡単な実装：最後にアクティブなセッション）
+	var currentSession *UploadSession
+	var currentSessionID string
+	for sessionID, session := range uploadSessions {
+		if session.IsActive {
+			currentSession = session
+			currentSessionID = sessionID
 			break
 		}
 	}
 
+	if currentSession == nil {
+		log.Printf("No active session found for chunk upload")
+		return EventEnvelopeResponse{
+			Event: EventEnvelopeEventUploadFileChunk,
+			Data:  map[string]string{"status": "error", "message": "no_active_session"},
+		}
+	}
+
+	// チャンクをセッションに追加
+	currentSession.Chunks = append(currentSession.Chunks, data.Chunk)
+	currentSession.TotalSize += int64(len(data.Chunk))
+
+	log.Printf("Chunk added to session %s. Total chunks: %d, Total size: %d bytes",
+		currentSessionID, len(currentSession.Chunks), currentSession.TotalSize)
+
+	return EventEnvelopeResponse{
+		Event: EventEnvelopeEventUploadFileChunk,
+		Data: map[string]interface{}{
+			"status":          "success",
+			"session_id":      currentSessionID,
+			"chunks_received": len(currentSession.Chunks),
+		},
+	}
+}
+
+func (wsc *WsController) finishedUpload(sessionID string) EventEnvelopeResponse {
+	log.Printf("Finishing upload for session: %s", sessionID)
+
+	session, exists := uploadSessions[sessionID]
+	if !exists {
+		log.Printf("Session not found: %s", sessionID)
+		return EventEnvelopeResponse{
+			Event: EventEnvelopeEventFinishedUpload,
+			Data:  map[string]string{"status": "error", "message": "session_not_found"},
+		}
+	}
+
+	// 全チャンクを結合
+	var completeFile []byte
+	for _, chunk := range session.Chunks {
+		completeFile = append(completeFile, chunk...)
+	}
+
+	log.Printf("Assembled complete file: %s, size: %d bytes from %d chunks",
+		session.FileName, len(completeFile), len(session.Chunks))
+
+	// ファイルを保存
+	filePath, err := wsc.UploadFileChunkService.Execute(completeFile, session.FileName)
+	if err != nil {
+		log.Printf("Error saving complete file: %v", err)
+		return EventEnvelopeResponse{
+			Event: EventEnvelopeEventFinishedUpload,
+			Data:  map[string]string{"status": "error", "message": "save_failed"},
+		}
+	}
+
+	// セッションをクリーンアップ
+	session.IsActive = false
+	delete(uploadSessions, sessionID)
+
+	log.Printf("Upload completed successfully for file: %s, saved at: %s", session.FileName, *filePath)
+
+	return EventEnvelopeResponse{
+		Event: EventEnvelopeEventFinishedUpload,
+		Data: map[string]interface{}{
+			"status":     "completed",
+			"filename":   session.FileName,
+			"file_path":  filePath,
+			"total_size": session.TotalSize,
+		},
+	}
 }
