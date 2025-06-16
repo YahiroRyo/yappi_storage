@@ -14,8 +14,8 @@ const nextConfig: NextConfig = {
           destination: "http://backend:8000/:path*",
         },
         {
-          source: "/storage/:path*",
-          destination: "http://backend:8000/:path*",
+          source: "/static/:path*",
+          destination: "http://backend:8000/static/:path*",
         },
       ],
     };
