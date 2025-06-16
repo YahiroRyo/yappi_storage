@@ -304,13 +304,28 @@ func (repo *FileRepository) RegistrationFile(tx *sqlx.Tx, user user.User, file f
 	return &file, nil
 }
 
-func (repo *FileRepository) UploadFileChunk(file []byte, dirname string) (*string, error) {
-	f, err := os.OpenFile(fmt.Sprintf("storage/files/%s", dirname), os.O_CREATE|os.O_RDWR|os.O_APPEND, 0666)
+func (repo *FileRepository) UploadFileChunk(file []byte, filename string) (*string, error) {
+	// 最小使用量のストレージパスを取得
+	storagePath, err := repo.GetStoreStoragePath()
 	if err != nil {
 		return nil, err
 	}
 
-	url := fmt.Sprintf("%s/static/%s", os.Getenv("BASE_URL"), dirname)
+	fullPath := fmt.Sprintf("storage/files/%s/%s", storagePath, filename)
+	f, err := os.OpenFile(fullPath, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0666)
+	if err != nil {
+		return nil, err
+	}
+
+	// 開発環境では /static でアクセス、本番環境では /files/secure/ でアクセス
+	var url string
+	if os.Getenv("ENVIRONMENT") == "production" {
+		// 本番環境ではfileIDから拡張子を取り除いてIDを取得
+		fileID := filename[:len(filename)-len(filepath.Ext(filename))]
+		url = fmt.Sprintf("%s/files/secure/%s", os.Getenv("BASE_URL"), fileID)
+	} else {
+		url = fmt.Sprintf("%s/static/%s/%s", os.Getenv("BASE_URL"), storagePath, filename)
+	}
 
 	defer f.Close()
 

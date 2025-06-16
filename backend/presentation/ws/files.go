@@ -16,6 +16,7 @@ type UploadFileChunkData struct {
 
 type UploadSession struct {
 	FileName  string
+	FileID    string
 	Chunks    [][]byte
 	TotalSize int64
 	IsActive  bool
@@ -27,10 +28,21 @@ var uploadSessions = make(map[string]*UploadSession)
 func (wsc *WsController) initializeFileName(filename string) EventEnvelopeResponse {
 	log.Printf("Initializing file upload for: %s", filename)
 
+	// ファイルIDを生成
+	fileID, err := helper.GenerateSnowflake()
+	if err != nil {
+		log.Printf("Error generating file ID: %v", err)
+		return EventEnvelopeResponse{
+			Event: EventEnvelopeEventInitializeFileName,
+			Data:  map[string]string{"status": "error", "message": "failed_to_generate_file_id"},
+		}
+	}
+
 	// 一意のセッションIDを生成
 	sessionID := fmt.Sprintf("%s_%d", filename, time.Now().UnixNano())
 	uploadSessions[sessionID] = &UploadSession{
 		FileName:  filename,
+		FileID:    *fileID,
 		Chunks:    make([][]byte, 0),
 		TotalSize: 0,
 		IsActive:  true,
@@ -39,7 +51,7 @@ func (wsc *WsController) initializeFileName(filename string) EventEnvelopeRespon
 
 	return EventEnvelopeResponse{
 		Event: EventEnvelopeEventInitializeFileName,
-		Data:  map[string]string{"session_id": sessionID, "status": "initialized"},
+		Data:  map[string]string{"session_id": sessionID, "file_id": *fileID, "status": "initialized"},
 	}
 }
 
@@ -119,8 +131,8 @@ func (wsc *WsController) finishedUpload(sessionID string) EventEnvelopeResponse 
 	log.Printf("Assembled complete file: %s, size: %d bytes from %d chunks",
 		session.FileName, len(completeFile), len(session.Chunks))
 
-	// ファイルを保存
-	filePath, err := wsc.UploadFileChunkService.Execute(completeFile, session.FileName)
+	// ファイルを保存（ファイルID + 拡張子のファイル名で保存）
+	filePath, err := wsc.UploadFileChunkService.Execute(completeFile, session.FileID, session.FileName)
 	if err != nil {
 		log.Printf("Error saving complete file: %v", err)
 		return EventEnvelopeResponse{
@@ -139,8 +151,8 @@ func (wsc *WsController) finishedUpload(sessionID string) EventEnvelopeResponse 
 	if wsc.VideoCompressionService.IsVideoFile(session.FileName) {
 		log.Printf("Video file detected: %s, starting compression", session.FileName)
 
-		// 圧縮後のファイル名を生成
-		compressedFilename := wsc.VideoCompressionService.GetCompressedFilename(session.FileName)
+		// 圧縮後のファイル名を生成（ファイルID + _compressed + 拡張子）
+		compressedFilename := session.FileID + "_compressed.mp4"
 
 		// ストレージパスサービスを使用して保存先パスを取得
 		storagePath, err := wsc.GetStoreStoragePathService.Execute()
@@ -148,7 +160,7 @@ func (wsc *WsController) finishedUpload(sessionID string) EventEnvelopeResponse 
 			log.Printf("Error getting storage path: %v", err)
 		} else {
 			inputPath := *filePath
-			outputPath := fmt.Sprintf("%s/%s", storagePath, compressedFilename)
+			outputPath := fmt.Sprintf("storage/files/%s/%s", storagePath, compressedFilename)
 
 			// 非同期で圧縮処理を実行
 			go func() {

@@ -9,7 +9,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func SetRoutes(app *fiber.App, controller controller.Controller, api api.Api, wsController ws.WsController, middleware middleware.Middleware) {
+func SetRoutes(app *fiber.App, controller controller.Controller, api api.Api, wsController ws.WsController, middleware middleware.Middleware, secureFileController controller.SecureFileController) {
 	app.Get("/", func(ctx *fiber.Ctx) error {
 		return ctx.Send(([]byte)("hello"))
 	})
@@ -24,6 +24,8 @@ func SetRoutes(app *fiber.App, controller controller.Controller, api api.Api, ws
 		files.Delete("/", controller.DeleteFiles)
 		files.Delete("/delete-cache", controller.DeleteCache)
 		files.Get("/file/:file_id", controller.GetFile)
+		// 本番環境でのセキュアファイルアクセス
+		files.Get("/secure/:id", secureFileController.GetSecureFile)
 	}
 
 	users := app.Group("/users")

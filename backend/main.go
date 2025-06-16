@@ -140,6 +140,15 @@ func diWs(conn *sqlx.DB, userRepo repository.UserRepository, fileRepo repository
 	}
 }
 
+func diSecureFileController(conn *sqlx.DB, userRepo repository.UserRepository, fileRepo repository.FileRepository, chatGPTRepo repository.ChatGPTRepository) controller.SecureFileController {
+	return controller.SecureFileController{
+		GetFileService: &service.GetFileService{
+			Conn:     conn,
+			FileRepo: &fileRepo,
+		},
+	}
+}
+
 func main() {
 	redisClient := redis.NewClient(&redis.Options{
 		Addr:     "redis:6379",
@@ -203,6 +212,7 @@ func main() {
 		diApi(conn, userRepo, fileRepo, chatGPTRepo),
 		diWs(conn, userRepo, fileRepo, chatGPTRepo),
 		diMiddleware(conn, userRepo, fileRepo, chatGPTRepo),
+		diSecureFileController(conn, userRepo, fileRepo, chatGPTRepo),
 	)
 
 	app.Listen(":8000")
