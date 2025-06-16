@@ -71,6 +71,8 @@ export const UploadFileModal = ({
         enableTurboMode: true,
         maxChunkSize: 75 * 1024 * 1024, // 75MB
         enableParallelFiles: uploadFileFormData.files.length <= 3, // 3ファイル以下なら並列処理
+        maxRetries: 3,                  // チェックサムミスマッチ時のリトライ回数
+        retryDelay: 1000,               // 初期リトライ遅延（1秒）
       };
 
       const urls = await uploadFiles(

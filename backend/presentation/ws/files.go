@@ -51,7 +51,12 @@ func (wsc *WsController) uploadFileChunk(data UploadFileChunkData) EventEnvelope
 		log.Printf("Checksum verification failed for chunk")
 		return EventEnvelopeResponse{
 			Event: EventEnvelopeEventUploadFileChunk,
-			Data:  map[string]string{"status": "error", "message": "checksum_mismatch"},
+			Data: map[string]interface{}{
+				"status":         "error",
+				"error_type":     "checksum_mismatch",
+				"message":        "チェックサムが一致しません。リトライしてください。",
+				"retry_required": true,
+			},
 		}
 	}
 

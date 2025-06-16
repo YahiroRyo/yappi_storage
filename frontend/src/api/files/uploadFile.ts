@@ -10,13 +10,17 @@ interface UploadConfig {
   adaptiveChunkSize: boolean;
   enableTurboMode: boolean;
   maxChunkSize: number;
+  maxRetries?: number;        // 最大リトライ回数
+  retryDelay?: number;        // 初期リトライ遅延（ミリ秒）
 }
 
 const DEFAULT_CONFIG: UploadConfig = {
   maxConcurrency: 3,           // 同時送信チャンク数
   adaptiveChunkSize: true,     // ファイルサイズに応じた動的チャンクサイズ
   enableTurboMode: true,       // 高速モード（遅延なし）
-  maxChunkSize: 100 * 1024 * 1024  // 最大チャンクサイズ（100MB）
+  maxChunkSize: 100 * 1024 * 1024,  // 最大チャンクサイズ（100MB）
+  maxRetries: 3,               // 最大リトライ回数
+  retryDelay: 1000,            // 初期リトライ遅延（1秒）
 };
 
 // 高速化されたCheckSum計算関数
@@ -146,8 +150,13 @@ export const uploadFile = async (
             
           case "upload_file_chunk":
             if (response.Data.status === "error") {
-              reject(new Error(`Upload error: ${response.Data.message}`));
-            } else {
+              if (response.Data.error_type === "checksum_mismatch") {
+                console.log(`Checksum mismatch detected - will be handled by chunk-specific retry logic`);
+                // この場合は個別のチャンクリトライロジックで処理される
+              } else {
+                reject(new Error(`Upload error: ${response.Data.message}`));
+              }
+            } else if (response.Data.status === "success") {
               console.log(`Chunk uploaded successfully. Chunks received: ${response.Data.chunks_received}`);
             }
             break;
@@ -245,51 +254,110 @@ export const uploadFile = async (
       let completedChunks = 0;
       
       const uploadSingleChunk = async (chunkInfo: {start: number, end: number, index: number}): Promise<void> => {
-        const chunk = file.slice(chunkInfo.start, chunkInfo.end);
-        const arrayBuffer = await chunk.arrayBuffer();
-        const checksum = calculateChecksum(arrayBuffer);
+        const maxRetries = uploadConfig.maxRetries || 3;
+        const baseDelay = uploadConfig.retryDelay || 1000;
+        let retryCount = 0;
         
-        // バイナリメッセージを構築
-        const checksumBuffer = new ArrayBuffer(8);
-        const checksumView = new DataView(checksumBuffer);
-        checksumView.setBigUint64(0, BigInt(checksum), false);
-        
-        const combinedBuffer = new ArrayBuffer(8 + arrayBuffer.byteLength);
-        const combinedView = new Uint8Array(combinedBuffer);
-        combinedView.set(new Uint8Array(checksumBuffer), 0);
-        combinedView.set(new Uint8Array(arrayBuffer), 8);
-        
-        // WebSocket状態チェック
-        if (client.readyState !== WebSocket.OPEN) {
-          throw new Error(`WebSocket not ready: readyState=${client.readyState}`);
-        }
-        
-        // 送信
-        client.send(combinedBuffer);
-        
-        // プログレス更新
-        uploadedBytes += chunk.size;
-        uploadProgress = uploadedBytes;
-        completedChunks++;
-        const progress = (uploadedBytes / file.size) * 100;
-        
-        // プログレスコールバック呼び出し
-        if (onProgress) {
-          const elapsed = (Date.now() - startTime) / 1000;
-          const speed = elapsed > 0 ? uploadedBytes / elapsed : 0;
-          
-          onProgress({
-            uploadedBytes,
-            totalBytes: file.size,
-            percentage: progress,
-            currentChunk: completedChunks,
-            totalChunks: chunks.length,
-            speed,
-            status: 'uploading'
+        const attemptUpload = async (): Promise<void> => {
+          return new Promise<void>((resolve, reject) => {
+            const chunk = file.slice(chunkInfo.start, chunkInfo.end);
+            
+            const processChunk = async () => {
+              try {
+                const arrayBuffer = await chunk.arrayBuffer();
+                const checksum = calculateChecksum(arrayBuffer);
+                
+                // バイナリメッセージを構築
+                const checksumBuffer = new ArrayBuffer(8);
+                const checksumView = new DataView(checksumBuffer);
+                checksumView.setBigUint64(0, BigInt(checksum), false);
+                
+                const combinedBuffer = new ArrayBuffer(8 + arrayBuffer.byteLength);
+                const combinedView = new Uint8Array(combinedBuffer);
+                combinedView.set(new Uint8Array(checksumBuffer), 0);
+                combinedView.set(new Uint8Array(arrayBuffer), 8);
+                
+                // WebSocket状態チェック
+                if (client.readyState !== WebSocket.OPEN) {
+                  throw new Error(`WebSocket not ready: readyState=${client.readyState}`);
+                }
+                
+                // チェックサムミスマッチレスポンス用の一時リスナー
+                const tempMessageHandler = (event: MessageEvent) => {
+                  try {
+                    const response = JSON.parse(event.data);
+                    
+                    if (response.Event === "upload_file_chunk") {
+                      if (response.Data.status === "error" && response.Data.error_type === "checksum_mismatch") {
+                        client.removeEventListener('message', tempMessageHandler);
+                        
+                        if (retryCount < maxRetries) {
+                          retryCount++;
+                          const delay = baseDelay * Math.pow(2, retryCount - 1); // 指数バックオフ
+                          
+                          console.log(`Checksum mismatch for chunk ${chunkInfo.index + 1}. Retrying in ${delay}ms (attempt ${retryCount}/${maxRetries})`);
+                          
+                          setTimeout(() => {
+                            attemptUpload().then(resolve).catch(reject);
+                          }, delay);
+                        } else {
+                          reject(new Error(`チェックサムミスマッチ: 最大リトライ回数 (${maxRetries}) に達しました。チャンク ${chunkInfo.index + 1}`));
+                        }
+                      } else if (response.Data.status === "success") {
+                        client.removeEventListener('message', tempMessageHandler);
+                        
+                        // プログレス更新
+                        uploadedBytes += chunk.size;
+                        uploadProgress = uploadedBytes;
+                        completedChunks++;
+                        const progress = (uploadedBytes / file.size) * 100;
+                        
+                        // プログレスコールバック呼び出し
+                        if (onProgress) {
+                          const elapsed = (Date.now() - startTime) / 1000;
+                          const speed = elapsed > 0 ? uploadedBytes / elapsed : 0;
+                          
+                          onProgress({
+                            uploadedBytes,
+                            totalBytes: file.size,
+                            percentage: progress,
+                            currentChunk: completedChunks,
+                            totalChunks: chunks.length,
+                            speed,
+                            status: 'uploading'
+                          });
+                        }
+                        
+                        console.log(`Chunk ${chunkInfo.index + 1}/${chunks.length} uploaded successfully (${progress.toFixed(1)}%) ${retryCount > 0 ? `after ${retryCount} retries` : ''}`);
+                        resolve();
+                      } else {
+                        client.removeEventListener('message', tempMessageHandler);
+                        reject(new Error(`Upload error: ${response.Data.message}`));
+                      }
+                    }
+                  } catch (error) {
+                    client.removeEventListener('message', tempMessageHandler);
+                    reject(new Error(`Failed to parse response: ${error}`));
+                  }
+                };
+                
+                // 一時リスナーを追加
+                client.addEventListener('message', tempMessageHandler);
+                
+                // 送信
+                client.send(combinedBuffer);
+                
+              } catch (error) {
+                reject(new Error(`Chunk processing error: ${error instanceof Error ? error.message : String(error)}`));
+              }
+            };
+            
+            processChunk();
           });
-        }
+        };
         
-        console.log(`Chunk ${chunkInfo.index + 1}/${chunks.length} uploaded (${progress.toFixed(1)}%)`);
+        // 初回アップロード試行
+        await attemptUpload();
       };
       
       // 並列アップロード実行
@@ -423,7 +491,9 @@ export const uploadFileWithTurboMode = async (
     maxConcurrency: 5,
     adaptiveChunkSize: true,
     enableTurboMode: true,
-    maxChunkSize: 100 * 1024 * 1024 // 100MB chunks
+    maxChunkSize: 100 * 1024 * 1024, // 100MB chunks
+    maxRetries: 5,                   // 高速モードでは多めのリトライ
+    retryDelay: 500,                 // 短めの初期遅延
   });
 };
 
@@ -436,7 +506,9 @@ export const uploadFilesWithParallelMode = async (
     adaptiveChunkSize: true,
     enableTurboMode: true,
     maxChunkSize: 75 * 1024 * 1024, // 75MB chunks for parallel
-    enableParallelFiles: true
+    enableParallelFiles: true,
+    maxRetries: 4,                  // 並列処理では適度なリトライ
+    retryDelay: 1000,               // 標準的な遅延
   });
 };
 
