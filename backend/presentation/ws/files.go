@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/YahiroRyo/yappi_storage/backend/helper"
@@ -159,7 +160,9 @@ func (wsc *WsController) finishedUpload(sessionID string) EventEnvelopeResponse 
 		if err != nil {
 			log.Printf("Error getting storage path: %v", err)
 		} else {
-			inputPath := *filePath
+			// 元ファイルのローカルパスを構築（URLではなくローカルファイルパス）
+			originalFilename := session.FileID + filepath.Ext(session.FileName)
+			inputPath := fmt.Sprintf("storage/files/%s/%s", storagePath, originalFilename)
 			outputPath := fmt.Sprintf("storage/files/%s/%s", storagePath, compressedFilename)
 
 			// 非同期で圧縮処理を実行
