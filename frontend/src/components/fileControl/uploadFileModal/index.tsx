@@ -429,7 +429,8 @@ export const UploadFileModal = ({
           </form>
         </GridVerticalRow>
 
-        <Loading isLoading={isLoading} />
+        {/* 詳細プログレス表示がない場合のみ従来のLoading表示 */}
+        <Loading isLoading={isLoading && uploadState.files.size === 0} />
       </Modal>
     );
   }
