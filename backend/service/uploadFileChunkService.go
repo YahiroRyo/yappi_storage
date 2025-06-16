@@ -10,7 +10,7 @@ type UploadFileChunkService struct {
 	FileRepo repository.FileRepositoryInterface
 }
 
-func (service *UploadFileChunkService) Execute(file []byte, fileID string, originalFilename string) (*string, error) {
+func (service *UploadFileChunkService) Execute(file []byte, fileID string, originalFilename string) (*repository.UploadResult, error) {
 	// 拡張子を取得
 	ext := filepath.Ext(originalFilename)
 

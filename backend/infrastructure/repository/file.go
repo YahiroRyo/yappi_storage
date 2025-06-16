@@ -21,6 +21,12 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+type UploadResult struct {
+	URL         string
+	StoragePath string
+	LocalPath   string
+}
+
 type FileRepositoryInterface interface {
 	DeleteCache(userID string) error
 	GetFiles(db *sqlx.DB, user user.User, parentDirectoryId *string, currentPageCount int, pageSize int) (*file.PaginationFiles, error)
@@ -33,7 +39,7 @@ type FileRepositoryInterface interface {
 		pageSize int,
 	) (*file.Files, error)
 	RegistrationFile(tx *sqlx.Tx, user user.User, file file.File) (*file.File, error)
-	UploadFileChunk(file []byte, dirname string) (*string, error)
+	UploadFileChunk(file []byte, dirname string) (*UploadResult, error)
 	UpdateFile(tx *sqlx.Tx, user user.User, file file.File) (*file.File, error)
 	DeleteFile(tx *sqlx.Tx, user user.User, id string) error
 	GetStorageSetting() ([]string, error)
@@ -304,7 +310,7 @@ func (repo *FileRepository) RegistrationFile(tx *sqlx.Tx, user user.User, file f
 	return &file, nil
 }
 
-func (repo *FileRepository) UploadFileChunk(file []byte, filename string) (*string, error) {
+func (repo *FileRepository) UploadFileChunk(file []byte, filename string) (*UploadResult, error) {
 	// 最小使用量のストレージパスを取得
 	storagePath, err := repo.GetStoreStoragePath()
 	if err != nil {
@@ -330,10 +336,18 @@ func (repo *FileRepository) UploadFileChunk(file []byte, filename string) (*stri
 	defer f.Close()
 
 	if _, err := f.Write(file); err != nil {
-		return &url, err
+		return &UploadResult{
+			URL:         url,
+			StoragePath: storagePath,
+			LocalPath:   fullPath,
+		}, err
 	}
 
-	return &url, nil
+	return &UploadResult{
+		URL:         url,
+		StoragePath: storagePath,
+		LocalPath:   fullPath,
+	}, nil
 }
 
 func (repo *FileRepository) UpdateFile(tx *sqlx.Tx, user user.User, file file.File) (*file.File, error) {

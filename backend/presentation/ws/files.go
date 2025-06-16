@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/YahiroRyo/yappi_storage/backend/helper"
@@ -133,7 +132,7 @@ func (wsc *WsController) finishedUpload(sessionID string) EventEnvelopeResponse 
 		session.FileName, len(completeFile), len(session.Chunks))
 
 	// ファイルを保存（ファイルID + 拡張子のファイル名で保存）
-	filePath, err := wsc.UploadFileChunkService.Execute(completeFile, session.FileID, session.FileName)
+	uploadResult, err := wsc.UploadFileChunkService.Execute(completeFile, session.FileID, session.FileName)
 	if err != nil {
 		log.Printf("Error saving complete file: %v", err)
 		return EventEnvelopeResponse{
@@ -146,7 +145,8 @@ func (wsc *WsController) finishedUpload(sessionID string) EventEnvelopeResponse 
 	session.IsActive = false
 	delete(uploadSessions, sessionID)
 
-	log.Printf("Upload completed successfully for file: %s, saved at: %s", session.FileName, *filePath)
+	log.Printf("Upload completed successfully for file: %s, saved at: %s (local: %s)",
+		session.FileName, uploadResult.URL, uploadResult.LocalPath)
 
 	// 動画ファイルの場合は非同期で圧縮処理を開始
 	if wsc.VideoCompressionService.IsVideoFile(session.FileName) {
@@ -155,14 +155,14 @@ func (wsc *WsController) finishedUpload(sessionID string) EventEnvelopeResponse 
 		// 圧縮後のファイル名を生成（ファイルID + _compressed + 拡張子）
 		compressedFilename := session.FileID + "_compressed.mp4"
 
-		// ストレージパスサービスを使用して保存先パスを取得
+		// アップロード結果から実際のローカルパスを使用
+		inputPath := uploadResult.LocalPath
+
+		// 圧縮後のファイル用のストレージパスを取得
 		storagePath, err := wsc.GetStoreStoragePathService.Execute()
 		if err != nil {
 			log.Printf("Error getting storage path: %v", err)
 		} else {
-			// 元ファイルのローカルパスを構築（URLではなくローカルファイルパス）
-			originalFilename := session.FileID + filepath.Ext(session.FileName)
-			inputPath := fmt.Sprintf("storage/files/%s/%s", storagePath, originalFilename)
 			outputPath := fmt.Sprintf("storage/files/%s/%s", storagePath, compressedFilename)
 
 			// 非同期で圧縮処理を実行
@@ -191,7 +191,7 @@ func (wsc *WsController) finishedUpload(sessionID string) EventEnvelopeResponse 
 		Data: map[string]interface{}{
 			"status":     "completed",
 			"filename":   session.FileName,
-			"file_path":  filePath,
+			"file_path":  uploadResult.URL,
 			"total_size": session.TotalSize,
 		},
 	}
