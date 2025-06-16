@@ -14,8 +14,12 @@ export const useWsClient = () => {
     console.log('Creating new WebSocket connection to:', `${wsUrl}/ws`);
     const ws = new WebSocket(`${wsUrl}/ws`);
     
+    // バイナリメッセージ送信のために必要な設定
+    ws.binaryType = 'arraybuffer';
+    
     ws.onopen = () => {
       console.log('WebSocket connection opened');
+      console.log('WebSocket binaryType:', ws.binaryType);
     };
     
     ws.onclose = (event) => {

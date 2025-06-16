@@ -21,6 +21,12 @@ const calculateChecksum = (data: ArrayBuffer): number => {
 const waitForConnection = (client: WebSocket): Promise<void> => {
   return new Promise((resolve, reject) => {
     if (client.readyState === WebSocket.OPEN) {
+      // バイナリタイプの設定確認
+      if (client.binaryType !== 'arraybuffer') {
+        console.log(`Setting WebSocket binaryType to arraybuffer (was: ${client.binaryType})`);
+        client.binaryType = 'arraybuffer';
+      }
+      console.log(`WebSocket ready: binaryType=${client.binaryType}, readyState=${client.readyState}`);
       resolve();
       return;
     }
@@ -31,7 +37,15 @@ const waitForConnection = (client: WebSocket): Promise<void> => {
 
     client.onopen = () => {
       clearTimeout(timeout);
+      
+      // バイナリタイプの設定確認と設定
+      if (client.binaryType !== 'arraybuffer') {
+        console.log(`Setting WebSocket binaryType to arraybuffer (was: ${client.binaryType})`);
+        client.binaryType = 'arraybuffer';
+      }
+      
       console.log("WebSocket connection established");
+      console.log(`WebSocket ready: binaryType=${client.binaryType}, readyState=${client.readyState}`);
       resolve();
     };
 
@@ -67,38 +81,38 @@ export const uploadFile = async (
         const response = JSON.parse(event.data);
         console.log("Received WebSocket message:", response);
         
-        switch (response.event) {
+        switch (response.Event) {
           case "initialize_file_name":
-            if (response.data.status === "initialized") {
-              sessionId = response.data.session_id;
+            if (response.Data.status === "initialized") {
+              sessionId = response.Data.session_id;
               console.log(`File upload initialized with session ID: ${sessionId}`);
               startChunkUpload();
             } else {
-              reject(new Error(`Failed to initialize file upload: ${response.data.message || 'Unknown error'}`));
+              reject(new Error(`Failed to initialize file upload: ${response.Data.message || 'Unknown error'}`));
             }
             break;
             
           case "upload_file_chunk":
-            if (response.data.status === "error") {
-              reject(new Error(`Upload error: ${response.data.message}`));
+            if (response.Data.status === "error") {
+              reject(new Error(`Upload error: ${response.Data.message}`));
             } else {
-              console.log(`Chunk uploaded successfully. Chunks received: ${response.data.chunks_received}`);
+              console.log(`Chunk uploaded successfully. Chunks received: ${response.Data.chunks_received}`);
             }
             break;
             
           case "finished_upload":
-            if (response.data.status === "completed") {
-              console.log(`Upload completed. File: ${response.data.filename}, Size: ${response.data.total_size} bytes`);
+            if (response.Data.status === "completed") {
+              console.log(`Upload completed. File: ${response.Data.filename}, Size: ${response.Data.total_size} bytes`);
               isCompleted = true;
               cleanup();
-              resolve(response.data.file_path || response.data.filename);
+              resolve(response.Data.file_path || response.Data.filename);
             } else {
-              reject(new Error(`Upload completion failed: ${response.data.message || 'Unknown error'}`));
+              reject(new Error(`Upload completion failed: ${response.Data.message || 'Unknown error'}`));
             }
             break;
             
           case "error":
-            reject(new Error(`WebSocket error: ${response.data.message || 'Unknown error'}`));
+            reject(new Error(`WebSocket error: ${response.Data.message || 'Unknown error'}`));
             break;
             
           default:
@@ -177,15 +191,32 @@ export const uploadFile = async (
           // チャンクデータをその後にコピー
           combinedView.set(new Uint8Array(arrayBuffer), 8);
           
+          // デバッグ用: バイナリデータの最初の部分をログ出力
+          const debugData = new Uint8Array(combinedBuffer.slice(0, Math.min(16, combinedBuffer.byteLength)));
+          console.log(`Binary data preview (first ${debugData.length} bytes):`, Array.from(debugData).map(b => b.toString(16).padStart(2, '0')).join(' '));
+          console.log(`Total combined buffer size: ${combinedBuffer.byteLength} bytes`);
+          console.log(`WebSocket readyState: ${client.readyState} (OPEN=${WebSocket.OPEN})`);
+          
           // バイナリメッセージとして送信
-          client.send(combinedBuffer);
+          if (client.readyState !== WebSocket.OPEN) {
+            throw new Error(`WebSocket not ready: readyState=${client.readyState}`);
+          }
+          
+          try {
+            console.log(`Sending binary message with ${combinedBuffer.byteLength} bytes...`);
+            client.send(combinedBuffer);
+            console.log(`Binary message sent successfully`);
+          } catch (sendError) {
+            console.error("Error sending binary message:", sendError);
+            throw new Error(`Failed to send binary message: ${sendError}`);
+          }
           
           uploadProgress += chunk.size;
           const progressPercentage = (uploadProgress / totalSize * 100).toFixed(2);
           console.log(`Upload progress: ${progressPercentage}%`);
           
-          // チャンク間に遅延を追加（サーバー側の処理負荷軽減）
-          await new Promise(resolve => setTimeout(resolve, 50));
+          // チャンク間に遅延を追加（サーバー側の処理負荷軽減とバイナリメッセージ処理のため）
+          await new Promise(resolve => setTimeout(resolve, 100));
           
         } catch (error) {
           console.error("Error processing chunk:", error);
