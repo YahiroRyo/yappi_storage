@@ -75,6 +75,10 @@ export const UploadFileModal = ({
         retryDelay: 1000,               // 初期リトライ遅延（1秒）
       };
 
+      // アップロード完了後のファイル登録を追跡
+      const completedUploads: string[] = [];
+      const allFiles = uploadFileFormData.files;
+      
       const urls = await uploadFiles(
         wsClient, 
         uploadFileFormData.files, 
@@ -97,40 +101,56 @@ export const UploadFileModal = ({
               status: progress.status,
             });
 
-            // アップロード完了時
+            // アップロード完了時（finished_uploadイベント受信後）
             if (progress.status === 'completed') {
               completeFileUpload(fileId);
+              completedUploads.push(urls[fileIndex] || fileName);
+              
+              // このファイルをDBに登録
+              const fileForRegistration = {
+                name: allFiles[fileIndex].name,
+                size: allFiles[fileIndex].size,
+                type: allFiles[fileIndex].type,
+                url: urls[fileIndex],
+                kind: fileToFileKind(allFiles[fileIndex]),
+                parent_directory_id: parentDirectoryId,
+              };
+              
+              // 個別ファイル登録
+              registrationFiles([fileForRegistration])
+                .then((res) => {
+                  if (res.status === 200) {
+                    console.log(`File registered successfully: ${fileName}`);
+                    
+                    // 全ファイルの登録が完了したかチェック
+                    if (completedUploads.length === allFiles.length) {
+                      console.log("All files uploaded and registered successfully");
+                      
+                      // 2秒後にモーダルを閉じてリフレッシュ
+                      setTimeout(() => {
+                        setIsLoading(false);
+                        setUploadFileFormData({
+                          files: [],
+                          disabled: false,
+                        });
+                        setIsOpended(false);
+                        setRefreshFiles((value) => !value);
+                        resetUpload();
+                      }, 2000);
+                    }
+                  } else {
+                    console.error(`Failed to register file: ${fileName}`, res.failedResponse);
+                    setFileError(fileId, `ファイル登録に失敗しました: ${res.failedResponse?.message || 'Unknown error'}`);
+                  }
+                })
+                .catch((error) => {
+                  console.error(`Error registering file: ${fileName}`, error);
+                  setFileError(fileId, `ファイル登録エラー: ${error.message}`);
+                });
             }
           }
         }
-      );
-      
-      const registrationFilesData = uploadFileFormData.files.map((file, index) => ({
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        url: urls[index],
-        kind: fileToFileKind(file),
-        parent_directory_id: parentDirectoryId,
-      }));
-
-      const res = await registrationFiles(registrationFilesData);
-      
-      // 処理完了後、3秒後にモーダルを閉じる
-      setTimeout(() => {
-        setIsLoading(false);
-        setUploadFileFormData({
-          files: [],
-          disabled: false,
-        });
-        setIsOpended(false);
-        setRefreshFiles((value) => !value);
-        resetUpload();
-      }, 3000);
-
-      if (res.status === 200) {
-        console.log("uploaded all files");
-      }
+             );
     } catch (error) {
       console.error("Upload error:", error);
       

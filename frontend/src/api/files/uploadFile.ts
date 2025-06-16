@@ -242,6 +242,34 @@ export const uploadFile = async (
                   speed: 0,
                   status: 'processing'
                 });
+                
+                // 動画処理完了を待つ（2秒後に完了ステータスを送信）
+                setTimeout(() => {
+                  if (onProgress) {
+                    onProgress({
+                      uploadedBytes: totalSize,
+                      totalBytes: totalSize,
+                      percentage: 100,
+                      currentChunk: 0,
+                      totalChunks: 0,
+                      speed: 0,
+                      status: 'completed'
+                    });
+                  }
+                }, 2000);
+              } else {
+                // 動画ファイル以外はすぐに完了ステータスを送信
+                if (onProgress) {
+                  onProgress({
+                    uploadedBytes: totalSize,
+                    totalBytes: totalSize,
+                    percentage: 100,
+                    currentChunk: 0,
+                    totalChunks: 0,
+                    speed: 0,
+                    status: 'completed'
+                  });
+                }
               }
               
               isCompleted = true;
