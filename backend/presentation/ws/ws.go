@@ -83,12 +83,26 @@ func (wsc *WsController) Ws(c *websocket.Conn) {
 				var response EventEnvelopeResponse
 				switch eventEnvelope.Event {
 				case EventEnvelopeEventInitializeFileName:
-					if filename, ok := eventEnvelope.Data.(string); ok {
-						response = wsc.initializeFileName(filename)
+					if dataMap, ok := eventEnvelope.Data.(map[string]interface{}); ok {
+						if filename, exists := dataMap["filename"]; exists {
+							if filenameStr, isString := filename.(string); isString {
+								response = wsc.initializeFileName(filenameStr)
+							} else {
+								response = EventEnvelopeResponse{
+									Event: EventEnvelopeEventInitializeFileName,
+									Data:  map[string]string{"status": "error", "message": "filename_not_string"},
+								}
+							}
+						} else {
+							response = EventEnvelopeResponse{
+								Event: EventEnvelopeEventInitializeFileName,
+								Data:  map[string]string{"status": "error", "message": "filename_missing"},
+							}
+						}
 					} else {
 						response = EventEnvelopeResponse{
 							Event: EventEnvelopeEventInitializeFileName,
-							Data:  map[string]string{"status": "error", "message": "invalid_filename"},
+							Data:  map[string]string{"status": "error", "message": "invalid_data_format"},
 						}
 					}
 				case EventEnvelopeEventFinishedUpload:
@@ -137,7 +151,7 @@ func (wsc *WsController) Ws(c *websocket.Conn) {
 				log.Printf("Processing binary chunk: checksum=%d, size=%d bytes", checksum, len(chunk))
 
 				uploadData := UploadFileChunkData{
-					Checksum: checksum,
+					Checksum: uint32(checksum),
 					Chunk:    chunk,
 				}
 
