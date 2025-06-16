@@ -17,19 +17,55 @@ const calculateChecksum = (data: ArrayBuffer): number => {
   return result % CHECKSUM_MODULUS;
 };
 
+// WebSocket接続の準備を待つ関数
+const waitForConnection = (client: WebSocket): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    if (client.readyState === WebSocket.OPEN) {
+      resolve();
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      reject(new Error("WebSocket connection timeout"));
+    }, 5000); // 5秒タイムアウト
+
+    client.onopen = () => {
+      clearTimeout(timeout);
+      console.log("WebSocket connection established");
+      resolve();
+    };
+
+    client.onerror = (error) => {
+      clearTimeout(timeout);
+      console.error("WebSocket connection error:", error);
+      reject(new Error("WebSocket connection failed"));
+    };
+  });
+};
+
 export const uploadFile = async (
   client: WebSocket,
   file: File
 ): Promise<string> => {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      // WebSocket接続を待つ
+      await waitForConnection(client);
+    } catch (error) {
+      reject(error);
+      return;
+    }
+
     let uploadProgress = 0;
     let sessionId = "";
     const totalSize = file.size;
+    let isCompleted = false;
 
     // WebSocketイベントハンドラの設定
-    client.onmessage = (event) => {
+    const messageHandler = (event: MessageEvent) => {
       try {
         const response = JSON.parse(event.data);
+        console.log("Received WebSocket message:", response);
         
         switch (response.event) {
           case "initialize_file_name":
@@ -38,7 +74,7 @@ export const uploadFile = async (
               console.log(`File upload initialized with session ID: ${sessionId}`);
               startChunkUpload();
             } else {
-              reject(new Error("Failed to initialize file upload"));
+              reject(new Error(`Failed to initialize file upload: ${response.data.message || 'Unknown error'}`));
             }
             break;
             
@@ -53,10 +89,16 @@ export const uploadFile = async (
           case "finished_upload":
             if (response.data.status === "completed") {
               console.log(`Upload completed. File: ${response.data.filename}, Size: ${response.data.total_size} bytes`);
+              isCompleted = true;
+              cleanup();
               resolve(response.data.file_path || response.data.filename);
             } else {
-              reject(new Error("Upload completion failed"));
+              reject(new Error(`Upload completion failed: ${response.data.message || 'Unknown error'}`));
             }
+            break;
+            
+          case "error":
+            reject(new Error(`WebSocket error: ${response.data.message || 'Unknown error'}`));
             break;
             
           default:
@@ -64,25 +106,52 @@ export const uploadFile = async (
         }
       } catch (error) {
         console.error("Error parsing WebSocket message:", error);
-        reject(error);
+        reject(new Error("Failed to parse WebSocket message"));
       }
     };
 
-    client.onerror = (error) => {
-      reject(new Error("WebSocket error: " + error));
+    const errorHandler = (error: Event) => {
+      console.error("WebSocket error during upload:", error);
+      if (!isCompleted) {
+        cleanup();
+        reject(new Error("WebSocket error during upload"));
+      }
     };
+
+    const closeHandler = (event: CloseEvent) => {
+      console.log("WebSocket closed during upload:", event.code, event.reason);
+      if (!isCompleted) {
+        cleanup();
+        reject(new Error(`WebSocket connection closed unexpectedly: ${event.reason || 'Unknown reason'}`));
+      }
+    };
+
+    const cleanup = () => {
+      client.removeEventListener('message', messageHandler);
+      client.removeEventListener('error', errorHandler);
+      client.removeEventListener('close', closeHandler);
+    };
+
+    // イベントリスナーを登録
+    client.addEventListener('message', messageHandler);
+    client.addEventListener('error', errorHandler);
+    client.addEventListener('close', closeHandler);
 
     // ファイルアップロードの初期化
     const initMessage = {
       event: "initialize_file_name",
       data: file.name
     };
+    
+    console.log("Sending initialization message:", initMessage);
     client.send(JSON.stringify(initMessage));
 
     // チャンクアップロードの開始
     const startChunkUpload = async () => {
-      const chunkSize = 1024 * 1024 * 50; // 50MB chunks
+      const chunkSize = 1024 * 1024 * 10; // 10MB chunks (以前の50MBから減らして安定性向上)
       let start = 0;
+
+      console.log(`Starting chunk upload for ${file.name}, total size: ${totalSize} bytes`);
 
       while (start < file.size) {
         const end = Math.min(start + chunkSize, file.size);
@@ -91,6 +160,8 @@ export const uploadFile = async (
         try {
           const arrayBuffer = await chunk.arrayBuffer();
           const checksum = calculateChecksum(arrayBuffer);
+          
+          console.log(`Uploading chunk: ${start}-${end}, size: ${arrayBuffer.byteLength} bytes, checksum: ${checksum}`);
           
           // CheckSumとチャンクデータを含むバイナリメッセージを作成
           const checksumBuffer = new ArrayBuffer(8);
@@ -110,12 +181,15 @@ export const uploadFile = async (
           client.send(combinedBuffer);
           
           uploadProgress += chunk.size;
-          console.log(`Upload progress: ${(uploadProgress / totalSize * 100).toFixed(2)}%`);
+          const progressPercentage = (uploadProgress / totalSize * 100).toFixed(2);
+          console.log(`Upload progress: ${progressPercentage}%`);
           
-          // チャンク間に小さな遅延を追加（サーバー側の処理を待つため）
-          await new Promise(resolve => setTimeout(resolve, 10));
+          // チャンク間に遅延を追加（サーバー側の処理負荷軽減）
+          await new Promise(resolve => setTimeout(resolve, 50));
           
         } catch (error) {
+          console.error("Error processing chunk:", error);
+          cleanup();
           reject(new Error("Error processing chunk: " + error));
           return;
         }
@@ -123,11 +197,15 @@ export const uploadFile = async (
         start = end;
       }
       
+      console.log(`All chunks uploaded for ${file.name}, sending finish message`);
+      
       // アップロード完了通知（セッションIDを含む）
       const finishMessage = {
         event: "finished_upload",
         data: sessionId
       };
+      
+      console.log("Sending finish message:", finishMessage);
       client.send(JSON.stringify(finishMessage));
     };
   });
@@ -140,16 +218,21 @@ export const uploadFiles = async (
 ): Promise<string[]> => {
   const urls: string[] = [];
   
+  console.log(`Starting upload of ${files.length} files`);
+  
   // 各ファイルを順番にアップロード
   for (const file of files) {
     try {
+      console.log(`Uploading file: ${file.name} (${file.size} bytes)`);
       const url = await uploadFile(wsClient, file);
       urls.push(url);
+      console.log(`Successfully uploaded: ${file.name}`);
     } catch (error) {
       console.error(`Error uploading file ${file.name}:`, error);
       throw error;
     }
   }
   
+  console.log(`All ${files.length} files uploaded successfully`);
   return urls;
 };
