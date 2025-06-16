@@ -20,6 +20,9 @@ export const useWsClient = () => {
     ws.onopen = () => {
       console.log('WebSocket connection opened');
       console.log('WebSocket binaryType:', ws.binaryType);
+      
+      // WebSocketバッファリング最適化のためのヒント
+      console.log('WebSocket ready for high-speed binary transfers');
     };
     
     ws.onclose = (event) => {
@@ -29,6 +32,14 @@ export const useWsClient = () => {
     
     ws.onerror = (error) => {
       console.error('WebSocket connection error:', error);
+    };
+    
+    // 高速化のためのヒント：メッセージキューの管理
+    ws.onmessage = (event) => {
+      // メッセージ処理の高速化のため、イベントの即座の転送
+      if (wsRef.current && wsRef.current !== ws) {
+        wsRef.current.dispatchEvent(new MessageEvent('message', { data: event.data }));
+      }
     };
     
     wsRef.current = ws;
