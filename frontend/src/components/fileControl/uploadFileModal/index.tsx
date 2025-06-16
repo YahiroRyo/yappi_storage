@@ -201,7 +201,7 @@ export const UploadFileModal = ({
               {/* 高速化設定の表示 */}
               {uploadFileFormData.files.length > 0 && (
                 <div style={{
-                  backgroundColor: uiConfig.color.surface.medium,
+                  backgroundColor: uiConfig.color.surface.main,
                   padding: "0.75rem",
                   borderRadius: "0.5rem",
                   fontSize: "0.8rem"
@@ -364,7 +364,7 @@ export const UploadFileModal = ({
               {/* 全体プログレス表示 */}
               {isLoading && uploadState.files.size > 0 && (
                 <div style={{
-                  backgroundColor: uiConfig.color.surface.medium,
+                  backgroundColor: uiConfig.color.surface.main,
                   padding: "1rem",
                   borderRadius: "0.5rem"
                 }}>
