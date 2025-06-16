@@ -10,7 +10,7 @@ import (
 )
 
 type UploadFileChunkData struct {
-	Checksum uint64
+	Checksum uint32
 	Chunk    []byte
 }
 

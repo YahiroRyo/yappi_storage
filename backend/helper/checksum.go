@@ -1,38 +1,24 @@
 package helper
 
 import (
+	"hash/crc32"
 	"log"
 )
 
-const (
-	ChecksumModulus = 1052
-)
+// CRC32を使用した高速チェックサム検証
+func CalculateChecksum(data []byte, checksum uint32) bool {
+	calculated := crc32.ChecksumIEEE(data)
 
-func CalculateChecksum(data []byte, checksum uint64) bool {
-	var result uint64
+	log.Printf("CRC32 CheckSum validation: calculated=%d, received=%d, match=%t", calculated, checksum, calculated == checksum)
 
-	for i := 0; i < len(data); i++ {
-		result += uint64(data[i])
-	}
-
-	result %= ChecksumModulus
-
-	log.Printf("CheckSum validation: calculated=%d, received=%d, match=%t", result, checksum, result == checksum)
-
-	return result == checksum
+	return calculated == checksum
 }
 
-// クライアント側で使用するためのCheckSum計算関数
-func CalculateChecksumValue(data []byte) uint64 {
-	var result uint64
+// クライアント側で使用するためのCRC32 CheckSum計算関数
+func CalculateChecksumValue(data []byte) uint32 {
+	calculated := crc32.ChecksumIEEE(data)
 
-	for i := 0; i < len(data); i++ {
-		result += uint64(data[i])
-	}
+	log.Printf("CRC32 CheckSum calculated: %d for %d bytes", calculated, len(data))
 
-	result %= ChecksumModulus
-
-	log.Printf("CheckSum calculated: %d for %d bytes", result, len(data))
-
-	return result
+	return calculated
 }

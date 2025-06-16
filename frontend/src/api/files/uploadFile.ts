@@ -23,21 +23,39 @@ const DEFAULT_CONFIG: UploadConfig = {
   retryDelay: 1000,            // 初期リトライ遅延（1秒）
 };
 
-// バックエンドと同じCheckSum計算関数（バイト単位の単純加算）
+// CRC32テーブル（IEEE polynomial）
+const CRC32_TABLE = (() => {
+  const table = new Uint32Array(256);
+  const polynomial = 0xEDB88320;
+
+  for (let i = 0; i < 256; i++) {
+    let crc = i;
+    for (let j = 0; j < 8; j++) {
+      if (crc & 1) {
+        crc = (crc >>> 1) ^ polynomial;
+      } else {
+        crc = crc >>> 1;
+      }
+    }
+    table[i] = crc;
+  }
+  return table;
+})();
+
+// 高速CRC32計算関数（バックエンドのCRC32IEEEと同じアルゴリズム）
 const calculateChecksum = (data: ArrayBuffer): number => {
-  const CHECKSUM_MODULUS = 1052;
   const bytes = new Uint8Array(data);
-  let result = 0;
+  let crc = 0xFFFFFFFF;
   
-  // バックエンドと同じ方法：バイト単位で単純加算
   for (let i = 0; i < bytes.length; i++) {
-    result += bytes[i];
+    const tableIndex = (crc ^ bytes[i]) & 0xFF;
+    crc = (crc >>> 8) ^ CRC32_TABLE[tableIndex];
   }
   
-  const checksum = result % CHECKSUM_MODULUS;
-  console.log(`Frontend checksum calculated: ${checksum} for ${bytes.length} bytes (raw sum: ${result})`);
+  const result = (crc ^ 0xFFFFFFFF) >>> 0; // >>> 0で32bit unsigned integerに変換
+  console.log(`CRC32 checksum calculated: ${result} for ${bytes.length} bytes`);
   
-  return checksum;
+  return result;
 };
 
 // 動的チャンクサイズの決定
@@ -92,6 +110,59 @@ const waitForConnection = (client: WebSocket): Promise<void> => {
   });
 };
 
+// 各ファイルアップロード前の初期化を保証する関数
+const ensureFileInitialization = (client: WebSocket, fileName: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    console.log(`Initializing new file upload session for: ${fileName}`);
+    
+    // 初期化リクエストを送信
+    const initMessage = {
+      Event: "initialize_file_name",
+      Data: { filename: fileName }
+    };
+    
+    const initHandler = (event: MessageEvent) => {
+      try {
+        const response = JSON.parse(event.data);
+        if (response.Event === "initialize_file_name") {
+          if (response.Data.status === "initialized") {
+            console.log(`File initialization successful for ${fileName}, session ID: ${response.Data.session_id}`);
+            client.removeEventListener('message', initHandler);
+            resolve(response.Data.session_id);
+          } else {
+            client.removeEventListener('message', initHandler);
+            reject(new Error(`File initialization failed: ${response.Data.message || 'Unknown error'}`));
+          }
+        }
+      } catch (error) {
+        client.removeEventListener('message', initHandler);
+        reject(new Error(`Failed to parse initialization response: ${error}`));
+      }
+    };
+    
+    // タイムアウト設定
+    const timeout = setTimeout(() => {
+      client.removeEventListener('message', initHandler);
+      reject(new Error("File initialization timeout"));
+    }, 10000); // 10秒タイムアウト
+    
+    client.addEventListener('message', initHandler);
+    
+    // クリーンアップ用のクリアタイムアウト
+    const originalHandler = initHandler;
+    const wrappedHandler = (event: MessageEvent) => {
+      clearTimeout(timeout);
+      originalHandler(event);
+    };
+    
+    client.removeEventListener('message', initHandler);
+    client.addEventListener('message', wrappedHandler);
+    
+    console.log(`Sending initialization message:`, initMessage);
+    client.send(JSON.stringify(initMessage));
+  });
+};
+
 export const uploadFile = async (
   client: WebSocket,
   file: File,
@@ -122,7 +193,7 @@ export const uploadFile = async (
     const totalSize = file.size;
     let isCompleted = false;
 
-    console.log(`Starting high-speed upload for ${file.name} (${(totalSize / 1024 / 1024).toFixed(1)}MB)`);
+    console.log(`Starting high-speed CRC32 upload for ${file.name} (${(totalSize / 1024 / 1024).toFixed(1)}MB)`);
     console.log(`Upload config:`, uploadConfig);
 
     // WebSocketイベントハンドラの設定
@@ -145,7 +216,7 @@ export const uploadFile = async (
           case "upload_file_chunk":
             if (response.Data.status === "error") {
               if (response.Data.error_type === "checksum_mismatch") {
-                console.log(`Checksum mismatch detected - will be handled by chunk-specific retry logic`);
+                console.log(`CRC32 checksum mismatch detected - will be handled by chunk-specific retry logic`);
                 // この場合は個別のチャンクリトライロジックで処理される
               } else {
                 reject(new Error(`Upload error: ${response.Data.message}`));
@@ -198,15 +269,15 @@ export const uploadFile = async (
       console.error("WebSocket error during upload:", error);
       if (!isCompleted) {
         cleanup();
-        reject(new Error("WebSocket error during upload"));
+        reject(new Error("WebSocket connection error during upload"));
       }
     };
 
     const closeHandler = (event: CloseEvent) => {
-      console.log("WebSocket closed during upload:", event.code, event.reason);
+      console.error("WebSocket closed during upload:", event);
       if (!isCompleted) {
         cleanup();
-        reject(new Error(`WebSocket connection closed unexpectedly: ${event.reason || 'Unknown reason'}`));
+        reject(new Error("WebSocket connection closed during upload"));
       }
     };
 
@@ -216,15 +287,15 @@ export const uploadFile = async (
       client.removeEventListener('close', closeHandler);
     };
 
-    // イベントリスナーを登録
+    // イベントリスナーの設定
     client.addEventListener('message', messageHandler);
     client.addEventListener('error', errorHandler);
     client.addEventListener('close', closeHandler);
 
     // ファイルアップロードの初期化
     const initMessage = {
-      event: "initialize_file_name",
-      data: file.name
+      Event: "initialize_file_name",
+      Data: { filename: file.name }
     };
     
     console.log("Sending initialization message:", initMessage);
@@ -401,7 +472,7 @@ export const uploadFile = async (
   });
 };
 
-// 複数ファイルを高速でアップロード（並列処理対応）
+// 複数ファイルを高速でアップロード（並列処理対応、各ファイル間で適切な初期化）
 export const uploadFiles = async (
   wsClient: WebSocket,
   files: File[],
@@ -424,16 +495,17 @@ export const uploadFiles = async (
   
   const urls: string[] = [];
   
-  console.log(`Starting upload of ${files.length} files with high-speed settings`);
+  console.log(`Starting upload of ${files.length} files with CRC32 high-speed settings`);
   console.log(`Parallel files enabled: ${uploadConfig.enableParallelFiles}`);
   
   if (uploadConfig.enableParallelFiles && files.length > 1) {
-    // 並列ファイルアップロード（実験的）
-    console.log(`Uploading ${files.length} files in parallel...`);
+    // 並列ファイルアップロード（実験的）- 各ファイル独立して初期化
+    console.log(`Uploading ${files.length} files in parallel with independent initialization...`);
     
     const uploadPromises = files.map(async (file, index) => {
       try {
         console.log(`Starting parallel upload ${index + 1}/${files.length}: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
+        
         const url = await uploadFile(wsClient, file, uploadConfig, (progress) => {
           if (onProgress) {
             onProgress(index, file.name, progress);
@@ -451,18 +523,26 @@ export const uploadFiles = async (
     urls.push(...results);
     
   } else {
-    // 順次ファイルアップロード（安定性重視）
+    // 順次ファイルアップロード（安定性重視）- 各ファイル間で明示的な初期化
     for (let index = 0; index < files.length; index++) {
       const file = files[index];
       try {
-        console.log(`Uploading file: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
+        console.log(`Uploading sequential file ${index + 1}/${files.length}: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
+        
         const url = await uploadFile(wsClient, file, uploadConfig, (progress) => {
           if (onProgress) {
             onProgress(index, file.name, progress);
           }
         });
         urls.push(url);
-        console.log(`Successfully uploaded: ${file.name}`);
+        console.log(`Successfully uploaded sequential file ${index + 1}/${files.length}: ${file.name}`);
+        
+        // 次のファイルがある場合は少し待機（セッション切り替えのため）
+        if (index < files.length - 1) {
+          console.log(`Preparing for next file upload...`);
+          await new Promise(resolve => setTimeout(resolve, 500)); // 500ms待機
+        }
+        
       } catch (error) {
         console.error(`Error uploading file ${file.name}:`, error);
         throw error;
@@ -470,11 +550,11 @@ export const uploadFiles = async (
     }
   }
   
-  console.log(`All ${files.length} files uploaded successfully in high-speed mode`);
+  console.log(`All ${files.length} files uploaded successfully with CRC32 high-speed mode`);
   return urls;
 };
 
-// プリセット設定関数
+// プリセット設定関数（CRC32対応）
 export const uploadFileWithTurboMode = async (
   client: WebSocket,
   file: File
@@ -483,7 +563,7 @@ export const uploadFileWithTurboMode = async (
     maxConcurrency: 5,
     adaptiveChunkSize: true,
     enableTurboMode: true,
-    maxChunkSize: 100 * 1024 * 1024, // 100MB chunks
+    maxChunkSize: 100 * 1024 * 1024, // 100MB chunks with CRC32
     maxRetries: 5,                   // 高速モードでは多めのリトライ
     retryDelay: 500,                 // 短めの初期遅延
   });
@@ -497,7 +577,7 @@ export const uploadFilesWithParallelMode = async (
     maxConcurrency: 4,
     adaptiveChunkSize: true,
     enableTurboMode: true,
-    maxChunkSize: 75 * 1024 * 1024, // 75MB chunks for parallel
+    maxChunkSize: 75 * 1024 * 1024, // 75MB chunks for parallel with CRC32
     enableParallelFiles: true,
     maxRetries: 4,                  // 並列処理では適度なリトライ
     retryDelay: 1000,               // 標準的な遅延
