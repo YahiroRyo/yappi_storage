@@ -136,6 +136,7 @@ func diWs(conn *sqlx.DB, userRepo repository.UserRepository, fileRepo repository
 		GetStoreStoragePathService: service.GetStoreStoragePathService{
 			FileRepo: &fileRepo,
 		},
+		VideoCompressionService: service.NewVideoCompressionService(),
 	}
 }
 

@@ -96,9 +96,19 @@ const waitForConnection = (client: WebSocket): Promise<void> => {
 export const uploadFile = async (
   client: WebSocket,
   file: File,
-  config?: Partial<UploadConfig>
+  config?: Partial<UploadConfig>,
+  onProgress?: (progress: {
+    uploadedBytes: number;
+    totalBytes: number;
+    percentage: number;
+    currentChunk: number;
+    totalChunks: number;
+    speed: number;
+    status: 'uploading' | 'processing' | 'completed';
+  }) => void
 ): Promise<string> => {
   const uploadConfig = { ...DEFAULT_CONFIG, ...config };
+  const startTime = Date.now();
   
   return new Promise(async (resolve, reject) => {
     try {
@@ -145,6 +155,21 @@ export const uploadFile = async (
           case "finished_upload":
             if (response.Data.status === "completed") {
               console.log(`Upload completed. File: ${response.Data.filename}, Size: ${response.Data.total_size} bytes`);
+              
+              // 動画ファイルの場合は処理中ステータスを通知
+              const isVideoFile = /\.(mp4|avi|mov|wmv|flv|webm|mkv|m4v)$/i.test(file.name);
+              if (isVideoFile && onProgress) {
+                onProgress({
+                  uploadedBytes: totalSize,
+                  totalBytes: totalSize,
+                  percentage: 100,
+                  currentChunk: 0,
+                  totalChunks: 0,
+                  speed: 0,
+                  status: 'processing'
+                });
+              }
+              
               isCompleted = true;
               cleanup();
               resolve(response.Data.file_path || response.Data.filename);
@@ -217,6 +242,7 @@ export const uploadFile = async (
       console.log(`File divided into ${chunks.length} chunks of ~${(chunkSize / 1024 / 1024).toFixed(1)}MB each`);
       
       let uploadedBytes = 0;
+      let completedChunks = 0;
       
       const uploadSingleChunk = async (chunkInfo: {start: number, end: number, index: number}): Promise<void> => {
         const chunk = file.slice(chunkInfo.start, chunkInfo.end);
@@ -244,7 +270,24 @@ export const uploadFile = async (
         // プログレス更新
         uploadedBytes += chunk.size;
         uploadProgress = uploadedBytes;
+        completedChunks++;
         const progress = (uploadedBytes / file.size) * 100;
+        
+        // プログレスコールバック呼び出し
+        if (onProgress) {
+          const elapsed = (Date.now() - startTime) / 1000;
+          const speed = elapsed > 0 ? uploadedBytes / elapsed : 0;
+          
+          onProgress({
+            uploadedBytes,
+            totalBytes: file.size,
+            percentage: progress,
+            currentChunk: completedChunks,
+            totalChunks: chunks.length,
+            speed,
+            status: 'uploading'
+          });
+        }
         
         console.log(`Chunk ${chunkInfo.index + 1}/${chunks.length} uploaded (${progress.toFixed(1)}%)`);
       };
@@ -302,7 +345,16 @@ export const uploadFile = async (
 export const uploadFiles = async (
   wsClient: WebSocket,
   files: File[],
-  config?: Partial<UploadConfig> & { enableParallelFiles?: boolean }
+  config?: Partial<UploadConfig> & { enableParallelFiles?: boolean },
+  onProgress?: (fileIndex: number, fileName: string, progress: {
+    uploadedBytes: number;
+    totalBytes: number;
+    percentage: number;
+    currentChunk: number;
+    totalChunks: number;
+    speed: number;
+    status: 'uploading' | 'processing' | 'completed';
+  }) => void
 ): Promise<string[]> => {
   const uploadConfig = { 
     ...DEFAULT_CONFIG, 
@@ -322,7 +374,11 @@ export const uploadFiles = async (
     const uploadPromises = files.map(async (file, index) => {
       try {
         console.log(`Starting parallel upload ${index + 1}/${files.length}: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
-        const url = await uploadFile(wsClient, file, uploadConfig);
+        const url = await uploadFile(wsClient, file, uploadConfig, (progress) => {
+          if (onProgress) {
+            onProgress(index, file.name, progress);
+          }
+        });
         console.log(`Successfully uploaded parallel file ${index + 1}/${files.length}: ${file.name}`);
         return url;
       } catch (error) {
@@ -336,10 +392,15 @@ export const uploadFiles = async (
     
   } else {
     // 順次ファイルアップロード（安定性重視）
-    for (const file of files) {
+    for (let index = 0; index < files.length; index++) {
+      const file = files[index];
       try {
         console.log(`Uploading file: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
-        const url = await uploadFile(wsClient, file, uploadConfig);
+        const url = await uploadFile(wsClient, file, uploadConfig, (progress) => {
+          if (onProgress) {
+            onProgress(index, file.name, progress);
+          }
+        });
         urls.push(url);
         console.log(`Successfully uploaded: ${file.name}`);
       } catch (error) {

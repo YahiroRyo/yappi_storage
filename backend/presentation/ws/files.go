@@ -3,6 +3,7 @@ package ws
 import (
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/YahiroRyo/yappi_storage/backend/helper"
@@ -128,6 +129,42 @@ func (wsc *WsController) finishedUpload(sessionID string) EventEnvelopeResponse 
 	delete(uploadSessions, sessionID)
 
 	log.Printf("Upload completed successfully for file: %s, saved at: %s", session.FileName, *filePath)
+
+	// 動画ファイルの場合は非同期で圧縮処理を開始
+	if wsc.VideoCompressionService.IsVideoFile(session.FileName) {
+		log.Printf("Video file detected: %s, starting compression", session.FileName)
+
+		// 圧縮後のファイル名を生成
+		compressedFilename := wsc.VideoCompressionService.GetCompressedFilename(session.FileName)
+
+		// ストレージパスサービスを使用して保存先パスを取得
+		storagePath, err := wsc.GetStoreStoragePathService.Execute()
+		if err != nil {
+			log.Printf("Error getting storage path: %v", err)
+		} else {
+			inputPath := *filePath
+			outputPath := fmt.Sprintf("%s/%s", storagePath, compressedFilename)
+
+			// 非同期で圧縮処理を実行
+			go func() {
+				log.Printf("Starting background video compression: %s -> %s", inputPath, outputPath)
+
+				err := wsc.VideoCompressionService.CompressVideo(inputPath, outputPath)
+				if err != nil {
+					log.Printf("Video compression failed: %v", err)
+				} else {
+					log.Printf("Video compression completed successfully: %s", outputPath)
+
+					// 圧縮に成功した場合、元ファイルを削除
+					if err := os.Remove(inputPath); err != nil {
+						log.Printf("Warning: Failed to delete original file %s: %v", inputPath, err)
+					} else {
+						log.Printf("Original video file deleted: %s", inputPath)
+					}
+				}
+			}()
+		}
+	}
 
 	return EventEnvelopeResponse{
 		Event: EventEnvelopeEventFinishedUpload,

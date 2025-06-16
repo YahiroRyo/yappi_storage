@@ -14,6 +14,7 @@ type WsController struct {
 	GetLoggedInUserService     service.GetLoggedInUserService
 	GetStorageSettingService   service.GetStorageSettingService
 	GetStoreStoragePathService service.GetStoreStoragePathService
+	VideoCompressionService    service.VideoCompressionService
 }
 
 type EventEnvelopeEvent string
