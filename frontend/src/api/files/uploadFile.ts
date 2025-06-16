@@ -118,7 +118,6 @@ export const uploadFile = async (
       return;
     }
 
-    let uploadProgress = 0;
     let sessionId = "";
     const totalSize = file.size;
     let isCompleted = false;
