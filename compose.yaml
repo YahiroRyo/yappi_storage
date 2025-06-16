@@ -20,7 +20,7 @@ services:
       dockerfile: ./docker/backend.Dockerfile
     volumes:
       - ./backend:/go/src/github.com/YahiroRyo/yappi_storage/backend
-      - ./storage:/~/storage
+      - ./backend/storage:/go/src/github.com/YahiroRyo/yappi_storage/backend/storage
     tty: true
     ports:
       - 127.0.0.1:8000:8000

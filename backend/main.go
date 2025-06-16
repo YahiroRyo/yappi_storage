@@ -190,6 +190,13 @@ func main() {
 		TimeZone:   "Asia/Tokyo",
 	}))
 
+	// 静的ファイル配信（認証なし）
+	app.Static("/static", "./storage/files", fiber.Static{
+		Compress:  false,
+		Browse:    true,
+		ByteRange: true,
+	})
+
 	route.SetRoutes(
 		app,
 		diController(conn, userRepo, fileRepo, chatGPTRepo),
@@ -197,12 +204,6 @@ func main() {
 		diWs(conn, userRepo, fileRepo, chatGPTRepo),
 		diMiddleware(conn, userRepo, fileRepo, chatGPTRepo),
 	)
-
-	app.Static("/files", "./storage/files", fiber.Static{
-		Compress:  false,
-		Browse:    true,
-		ByteRange: true,
-	})
 
 	app.Listen(":8000")
 }
