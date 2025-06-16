@@ -222,12 +222,16 @@ export const UploadFileModal = ({
                   <Text size="small" fontWeight={600}>選択されたファイル ({uploadFileFormData.files.length}件):</Text>
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                     {uploadFileFormData.files.map((file, index) => {
+                      // fileIdを生成（initializeUploadと同じロジック）
+                      const fileId = `${file.name}_${Date.now()}_${index}`;
                       // 対応するプログレス情報を取得
-                      const fileProgress = Array.from(uploadState.files.values())[index];
+                      const fileProgress = Array.from(uploadState.files.values()).find(
+                        progress => progress.fileName === file.name
+                      );
                       
                       return (
                         <div
-                          key={index}
+                          key={`${file.name}_${index}`}
                           style={{
                             display: "flex",
                             flexDirection: "column",

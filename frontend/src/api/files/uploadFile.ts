@@ -23,26 +23,21 @@ const DEFAULT_CONFIG: UploadConfig = {
   retryDelay: 1000,            // 初期リトライ遅延（1秒）
 };
 
-// 高速化されたCheckSum計算関数
+// バックエンドと同じCheckSum計算関数（バイト単位の単純加算）
 const calculateChecksum = (data: ArrayBuffer): number => {
   const CHECKSUM_MODULUS = 1052;
   const bytes = new Uint8Array(data);
   let result = 0;
   
-  // Uint32Arrayを使用して4バイトずつ処理（高速化）
-  const uint32Array = new Uint32Array(data.slice(0, Math.floor(data.byteLength / 4) * 4));
-  for (let i = 0; i < uint32Array.length; i++) {
-    result += uint32Array[i];
-  }
-  
-  // 残りのバイトを処理
-  const remainder = data.byteLength % 4;
-  const remainderStart = data.byteLength - remainder;
-  for (let i = remainderStart; i < data.byteLength; i++) {
+  // バックエンドと同じ方法：バイト単位で単純加算
+  for (let i = 0; i < bytes.length; i++) {
     result += bytes[i];
   }
   
-  return result % CHECKSUM_MODULUS;
+  const checksum = result % CHECKSUM_MODULUS;
+  console.log(`Frontend checksum calculated: ${checksum} for ${bytes.length} bytes (raw sum: ${result})`);
+  
+  return checksum;
 };
 
 // 動的チャンクサイズの決定
@@ -239,20 +234,19 @@ export const uploadFile = async (
     // チャンクアップロードの開始
     const startChunkUpload = async () => {
       const chunkSize = getOptimalChunkSize(file.size, uploadConfig);
-      const concurrency = uploadConfig.maxConcurrency; // 同時に送信するチャンク数
-      const chunks: Array<{start: number, end: number, index: number}> = [];
+      const chunks: {start: number, end: number, index: number}[] = [];
+      let uploadedBytes = 0;
+      let completedChunks = 0;
       
-      // チャンクリストを作成
+      // チャンク情報を事前に計算
       for (let start = 0; start < file.size; start += chunkSize) {
         const end = Math.min(start + chunkSize, file.size);
         chunks.push({ start, end, index: chunks.length });
       }
       
-      console.log(`File divided into ${chunks.length} chunks of ~${(chunkSize / 1024 / 1024).toFixed(1)}MB each`);
-      
-      let uploadedBytes = 0;
-      let completedChunks = 0;
-      
+      const concurrency = Math.min(uploadConfig.maxConcurrency, chunks.length);
+      console.log(`Uploading ${chunks.length} chunks with concurrency ${concurrency}, chunk size: ${(chunkSize / 1024 / 1024).toFixed(1)}MB`);
+
       const uploadSingleChunk = async (chunkInfo: {start: number, end: number, index: number}): Promise<void> => {
         const maxRetries = uploadConfig.maxRetries || 3;
         const baseDelay = uploadConfig.retryDelay || 1000;
@@ -306,9 +300,8 @@ export const uploadFile = async (
                       } else if (response.Data.status === "success") {
                         client.removeEventListener('message', tempMessageHandler);
                         
-                        // プログレス更新
+                        // プログレス更新（重複を避けるため、成功時のみ更新）
                         uploadedBytes += chunk.size;
-                        uploadProgress = uploadedBytes;
                         completedChunks++;
                         const progress = (uploadedBytes / file.size) * 100;
                         
